@@ -92,6 +92,172 @@ body {
   --panel-border: #e2dfd9;
 }
 
+/* Dark Mode Palette — Warm Charcoal, Espresso Slate, Light Brown & Sage Green */
+html.dark,
+html.dark .theme-user,
+html.dark .theme-technician,
+html.dark .theme-admin {
+  --background: #141312;
+  --foreground: #f2efe9;
+  --surface: #1d1c1a;
+  --surface-foreground: #f2efe9;
+  --card: #1d1c1a;
+  --card-foreground: #f2efe9;
+  --primary: #a38266;
+  --primary-foreground: #ffffff;
+  --secondary: #262421;
+  --secondary-foreground: #f2efe9;
+  --muted: #181715;
+  --muted-foreground: #a6a098;
+  --accent: #182b20;
+  --accent-foreground: #6ec98e;
+  --border: #2e2c28;
+  --input: #36332e;
+  --ring: #a38266;
+  --panel-bg: #1d1c1a;
+  --panel-border: #2e2c28;
+}
+
+html.dark body {
+  background-color: #141312;
+  color: #f2efe9;
+  letter-spacing: 0.005em;
+}
+
+/* Dark Mode Surface & Text Adaptation Across All Portals & Modals */
+html.dark .bg-\[\#f4f4f2\],
+html.dark .bg-\[\#f4f4f2\]\/70,
+html.dark .bg-\[\#f4f4f2\]\/60,
+html.dark .bg-\[\#f4f4f2\]\/50 {
+  background-color: #141312 !important;
+}
+
+html.dark .bg-\[\#fafaf9\] {
+  background-color: #181715 !important;
+}
+
+html.dark .bg-white {
+  background-color: #1d1c1a !important;
+}
+
+html.dark .bg-white\/90,
+html.dark .bg-white\/80,
+html.dark .bg-white\/70 {
+  background-color: rgba(29, 28, 26, 0.9) !important;
+}
+
+html.dark .bg-\[\#ebe9e4\],
+html.dark .bg-stone-100,
+html.dark .bg-stone-50 {
+  background-color: #262421 !important;
+}
+
+/* Light Brown Accents in Dark Mode */
+html.dark .bg-\[\#f5efe8\],
+html.dark .bg-\[\#ebe3da\],
+html.dark .bg-\[\#ebe5df\] {
+  background-color: #2b231d !important;
+}
+
+html.dark .text-\[\#6e533c\],
+html.dark .text-\[\#5c4433\],
+html.dark .text-\[\#8c6d53\] {
+  color: #d6b699 !important;
+}
+
+html.dark .bg-\[\#8c6d53\] {
+  background-color: #9c7a5e !important;
+  color: #ffffff !important;
+}
+
+html.dark .bg-\[\#8c6d53\]:hover {
+  background-color: #88684e !important;
+}
+
+/* Light Green Resolved / Success Accents in Dark Mode */
+html.dark .bg-\[\#e6f4ea\],
+html.dark .bg-\[\#e6f4ea\]\/60 {
+  background-color: #172a1f !important;
+}
+
+html.dark .text-\[\#2f6b45\],
+html.dark .text-\[\#1e462d\] {
+  color: #6bc78b !important;
+}
+
+html.dark .border-\[\#c6e6d0\] {
+  border-color: #274a35 !important;
+}
+
+/* Borders & Dividers in Dark Mode */
+html.dark .border-\[\#e2dfd9\],
+html.dark .border-\[\#ebe9e4\],
+html.dark .border-\[\#f0eee9\],
+html.dark .border-\[\#d5d1c8\],
+html.dark .border-\[\#dad7d0\],
+html.dark .border-\[\#e7e5e4\],
+html.dark .border-stone-200,
+html.dark .border-stone-300 {
+  border-color: #2e2c28 !important;
+}
+
+html.dark .border-\[\#d6c2b0\],
+html.dark .border-\[\#e3d5c5\],
+html.dark .border-\[\#d4c3b2\],
+html.dark .border-\[\#d6c7b8\] {
+  border-color: #4a3b2f !important;
+}
+
+html.dark .divide-\[\#ebe9e4\] > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-\[\#e2dfd9\] > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-stone-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #282623 !important;
+}
+
+/* Typography Hierarchy in Dark Mode */
+html.dark .text-\[\#262523\],
+html.dark .text-stone-900,
+html.dark .text-stone-800 {
+  color: #f2efe9 !important;
+}
+
+html.dark .text-\[\#5c5954\],
+html.dark .text-stone-700,
+html.dark .text-stone-600 {
+  color: #b5afa6 !important;
+}
+
+html.dark .text-\[\#8c8881\],
+html.dark .text-stone-500,
+html.dark .text-stone-400 {
+  color: #8c867d !important;
+}
+
+/* Form Controls in Dark Mode */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color: #f2efe9;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #78736a !important;
+}
+
+/* Hover States in Dark Mode */
+html.dark .hover\:bg-\[\#f4f4f2\]:hover,
+html.dark .hover\:bg-\[\#f4f4f2\]\/60:hover,
+html.dark .hover\:bg-\[\#f4f4f2\]\/70:hover,
+html.dark .hover\:bg-\[\#f4f4f2\]\/50:hover,
+html.dark .hover\:bg-\[\#ebe9e4\]:hover {
+  background-color: #262421 !important;
+}
+
+html.dark .hover\:bg-\[\#f5efe8\]:hover {
+  background-color: #2b231d !important;
+}
+
 .panel {
   background-color: var(--panel-bg);
   border: 1px solid var(--border);
@@ -127,6 +293,11 @@ body {
   box-shadow: 0 4px 12px -2px rgba(47, 107, 69, 0.06);
 }
 
+html.dark .calm-card-hover:hover {
+  border-color: #4a3b2f !important;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.35);
+}
+
 .calm-btn {
   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
@@ -158,11 +329,20 @@ body {
   background: #f4f4f2;
 }
 
+html.dark ::-webkit-scrollbar-track {
+  background: #141312;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #d6d3cd;
   border-radius: 9999px;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background: #36332e;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #6da886;
 }
+

@@ -30,6 +30,8 @@ import {
   ExternalLink,
   RotateCcw,
   Save,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -71,6 +73,8 @@ export const AdminControlCenter: React.FC = () => {
     slaConfig,
     updateSLAConfig,
     resetSLAConfig,
+    isDarkMode,
+    toggleDarkMode,
   } = useApp();
 
   const [activeNav, setActiveNav] = useState<
@@ -540,6 +544,25 @@ export const AdminControlCenter: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="calm-btn flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-[#e2dfd9] bg-white hover:bg-[#f4f4f2] text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-all cursor-pointer whitespace-nowrap shrink-0"
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun className="size-3.5 text-[#8c6d53]" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="size-3.5 text-[#8c6d53]" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
+
             {/* Notification Bell */}
             <button
               onClick={() => setIsNotificationCenterOpen(true)}

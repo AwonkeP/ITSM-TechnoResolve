@@ -128,6 +128,8 @@ interface AppContextType {
   slaConfig: SLAConfig;
   updateSLAConfig: (next: Omit<SLAConfig, 'updated_at' | 'updated_by'>) => void;
   resetSLAConfig: () => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -138,6 +140,7 @@ const STORAGE_KEYS = {
   UNREAD: 'technoresolve_unread_v4',
   AUDIT_LOGS: 'technoresolve_audit_logs_v1',
   SLA_CONFIG: 'technoresolve_sla_config_v1',
+  DARK_MODE: 'technoresolve_dark_mode_v1',
 };
 
 // Play a pleasant synthesizer notification sound via Web Audio API
@@ -252,6 +255,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notificationToast, setNotificationToast] = useState<ToastItem | null>(null);
   const [isOutboxOpen, setIsOutboxOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.DARK_MODE) === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DARK_MODE, String(isDarkMode));
+    } catch (e) {
+      // ignore
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', isDarkMode);
+      document.body.classList.toggle('dark', isDarkMode);
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = useCallback(() => {
+    setIsDarkMode((prev) => !prev);
+  }, []);
 
   const prevNotifsLengthRef = useRef(0);
 
@@ -1502,6 +1528,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         slaConfig,
         updateSLAConfig,
         resetSLAConfig,
+        isDarkMode,
+        toggleDarkMode,
       }}
     >
       {children}

@@ -7,7 +7,7 @@ import {
   Bell, LogOut, Search, SlidersHorizontal, Copy, UserPlus,
   UserCheck, ArrowUpRight, CheckCircle, Lock, Send, Cpu, User,
   CheckCircle2, Paperclip, Trash2, Download, FileText as FileIcon,
-  Mic, Loader2, AlertCircle, AlertTriangle
+  Mic, Loader2, AlertCircle, AlertTriangle, Sun, Moon
 } from 'lucide-react';
 import { RoleSwitcher } from './RoleSwitcher';
 import { AssignAgentModal } from './AssignAgentModal';
@@ -32,6 +32,8 @@ export const TechnicianWorkspace: React.FC = () => {
     setIsNotificationCenterOpen,
     showToast,
     slaConfig,
+    isDarkMode,
+    toggleDarkMode,
   } = useApp();
 
   const [filterMode, setFilterMode] = useState<'all' | 'mine' | 'new' | 'in_progress' | 'escalated' | 'resolved' | 'dashboard' | 'reports'>('all');
@@ -476,6 +478,24 @@ export const TechnicianWorkspace: React.FC = () => {
         {/* Top Navbar */}
         <header className="h-12 border-b border-[#e2dfd9] bg-white flex items-center justify-end px-4 gap-3 shrink-0 text-stone-800">
           {currentUser?.role === 'admin' && <RoleSwitcher />}
+
+          <button
+            onClick={toggleDarkMode}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="calm-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] cursor-pointer whitespace-nowrap shrink-0"
+          >
+            {isDarkMode ? (
+              <>
+                <Sun className="size-3.5 text-[#8c6d53]" />
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="size-3.5 text-[#8c6d53]" />
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
+          </button>
           
           <div className="flex items-center gap-2.5 border border-[#e2dfd9] bg-[#fafaf9] rounded-full py-1 px-3">
              <div className="size-6 rounded-full bg-[#f5efe8] text-[#6e533c] border border-[#e3d5c5] flex items-center justify-center text-xs font-bold uppercase">

@@ -28,6 +28,8 @@ import {
   Phone,
   Building2,
   Mail,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { RoleSwitcher } from './RoleSwitcher';
 import { NewTicketModal } from './NewTicketModal';
@@ -44,6 +46,8 @@ export const CustomerPortal: React.FC = () => {
     unreadNotificationsCount,
     setIsNotificationCenterOpen,
     updateCurrentUserProfile,
+    isDarkMode,
+    toggleDarkMode,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'home' | 'tickets' | 'account' | 'help'>('home');
@@ -260,6 +264,25 @@ export const CustomerPortal: React.FC = () => {
 
           {/* Right Action Icons & Role Switcher */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="calm-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] cursor-pointer whitespace-nowrap shrink-0"
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun className="size-3.5 text-[#8c6d53]" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="size-3.5 text-[#8c6d53]" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
+
             {/* Notification Bell */}
             <button
               onClick={() => setIsNotificationCenterOpen(true)}
@@ -775,6 +798,26 @@ export const CustomerPortal: React.FC = () => {
                       <span className="inline-flex items-center gap-1 rounded-md bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] px-2.5 py-0.5 text-xs font-semibold">
                         <CheckCircle2 className="size-3" /> Enterprise SLA (24/7)
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Appearance Mode</span>
+                      <button
+                        type="button"
+                        onClick={toggleDarkMode}
+                        className="calm-btn inline-flex items-center gap-1.5 rounded-lg border border-[#e2dfd9] bg-[#f4f4f2] hover:bg-[#ebe9e4] px-3 py-1 text-xs font-semibold text-stone-800 cursor-pointer"
+                      >
+                        {isDarkMode ? (
+                          <>
+                            <Sun className="size-3.5 text-[#8c6d53]" />
+                            <span>Dark Mode Active (Switch to Light)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Moon className="size-3.5 text-[#8c6d53]" />
+                            <span>Light Mode Active (Switch to Dark)</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-stone-500">Account Created</span>
