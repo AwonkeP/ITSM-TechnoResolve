@@ -1,0 +1,6 @@
+{
+  "name": "TechnoResolve Desk",
+  "description": "Tiered support desk for admins, technicians and customers with AI ticket classification and role-specific workflows.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,353 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role and access states",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "full_name": {
+          "type": "string",
+          "description": "User full name"
+        },
+        "company": {
+          "type": "string",
+          "description": "Organization/Company name"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "admin",
+            "technician",
+            "user"
+          ],
+          "description": "Assigned access role"
+        },
+        "is_approved": {
+          "type": "boolean",
+          "description": "Admin approval status"
+        },
+        "email_verified": {
+          "type": "boolean",
+          "description": "Email verification flag"
+        },
+        "verification_code": {
+          "type": "string",
+          "description": "Verification PIN code"
+        },
+        "rejected": {
+          "type": "boolean",
+          "description": "Account rejection flag"
+        },
+        "banned": {
+          "type": "boolean",
+          "description": "Account ban status"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Account creation timestamp"
+        },
+        "avatar_url": {
+          "type": "string",
+          "description": "Optional avatar URL"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Optional contact number"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "full_name",
+        "role",
+        "is_approved",
+        "email_verified",
+        "banned",
+        "created_at"
+      ]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Support request ticket",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ticket ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Ticket subject or title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Full problem description"
+        },
+        "category": {
+          "type": "string",
+          "description": "Issue category"
+        },
+        "priority": {
+          "type": "string",
+          "description": "Priority level"
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle state"
+        },
+        "requester_id": {
+          "type": "string",
+          "description": "ID of the user who submitted the ticket"
+        },
+        "requester_name": {
+          "type": "string",
+          "description": "Name of requester"
+        },
+        "requester_email": {
+          "type": "string",
+          "description": "Email of requester"
+        },
+        "company": {
+          "type": "string",
+          "description": "Company name"
+        },
+        "assigned_to": {
+          "type": "string",
+          "description": "Technician ID assigned"
+        },
+        "assigned_name": {
+          "type": "string",
+          "description": "Technician Name assigned"
+        },
+        "ai_category": {
+          "type": "string",
+          "description": "AI predicted category"
+        },
+        "ai_confidence": {
+          "type": "number",
+          "description": "AI confidence score"
+        },
+        "ai_reasoning": {
+          "type": "string",
+          "description": "AI triage explanation"
+        },
+        "ai_suggested_priority": {
+          "type": "string",
+          "description": "AI suggested priority"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "Last update timestamp"
+        },
+        "resolved_at": {
+          "type": "string",
+          "description": "Resolution timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "category",
+        "priority",
+        "status",
+        "requester_id",
+        "requester_name",
+        "requester_email",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "TicketMessage": {
+      "title": "TicketMessage",
+      "description": "Chat or audit message on a support ticket",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique message ID"
+        },
+        "ticket_id": {
+          "type": "string",
+          "description": "Target ticket ID"
+        },
+        "author_id": {
+          "type": "string",
+          "description": "Message author user ID"
+        },
+        "author_name": {
+          "type": "string",
+          "description": "Message author display name"
+        },
+        "author_role": {
+          "type": "string",
+          "description": "Role of author"
+        },
+        "body": {
+          "type": "string",
+          "description": "Message body text"
+        },
+        "internal": {
+          "type": "boolean",
+          "description": "Whether message is internal technician note"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Message timestamp"
+        },
+        "ticket_requester_id": {
+          "type": "string",
+          "description": "ID of the user who requested the ticket this message belongs to"
+        }
+      },
+      "required": [
+        "id",
+        "ticket_id",
+        "author_id",
+        "author_name",
+        "author_role",
+        "body",
+        "internal",
+        "created_at",
+        "ticket_requester_id"
+      ]
+    },
+    "EmailOutboxItem": {
+      "title": "EmailOutboxItem",
+      "description": "Logged email notification item",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique outbox item ID"
+        },
+        "to": {
+          "type": "string",
+          "description": "Recipient email"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email subject"
+        },
+        "template": {
+          "type": "string",
+          "description": "Template name"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "sent",
+            "queued",
+            "failed"
+          ],
+          "description": "Delivery status"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "ticket_id": {
+          "type": "string",
+          "description": "Associated ticket ID"
+        },
+        "payload": {
+          "type": "string",
+          "description": "JSON payload or details"
+        }
+      },
+      "required": [
+        "id",
+        "to",
+        "subject",
+        "template",
+        "status",
+        "created_at"
+      ]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app user notification",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique notification ID"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "Recipient user ID or target audience"
+        },
+        "title": {
+          "type": "string",
+          "description": "Notification title"
+        },
+        "message": {
+          "type": "string",
+          "description": "Notification message body"
+        },
+        "type": {
+          "type": "string",
+          "description": "Notification type category"
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Read status flag"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Timestamp"
+        },
+        "link_page": {
+          "type": "string",
+          "description": "Associated app route"
+        },
+        "target_id": {
+          "type": "string",
+          "description": "Target entity ID"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "message",
+        "type",
+        "read",
+        "created_at"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and credentials collection"
+    },
+    "/tickets/{ticketId}": {
+      "schema": "Ticket",
+      "description": "Customer support tickets"
+    },
+    "/messages/{messageId}": {
+      "schema": "TicketMessage",
+      "description": "Ticket conversation messages and notes"
+    },
+    "/outbox/{outboxId}": {
+      "schema": "EmailOutboxItem",
+      "description": "Transactional email outbox logs"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "User notifications feed"
+    }
+  }
+}
