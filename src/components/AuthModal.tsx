@@ -1,38 +1,27 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
 import {
-  ShieldCheck,
-  Wrench,
-  User,
   X,
   Bot,
-  Lock,
-  Mail,
-  Building,
   ArrowRight,
-  Sparkles,
-  Crown,
   AlertCircle,
-  Loader2
+  Loader2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 export const AuthModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   initialMode?: 'signin' | 'signup';
 }> = ({ isOpen, onClose, initialMode = 'signin' }) => {
-  const { signIn, signInWithGoogle, signUp, switchDemoUser, setActivePage, setViewRole, showToast } = useApp();
+  const { signIn, signInWithGoogle, signUp, setActivePage, showToast } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'signup' | 'verify'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [company, setCompany] = useState('');
-  const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
@@ -68,19 +57,17 @@ export const AuthModal: React.FC<{
           return;
         }
 
-        // Start verification flow
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         setGeneratedOtp(otp);
         setOtpError('');
-        
+
         try {
-          // Dynamically import emailjs
           const emailjs = (await import('@emailjs/browser')).default;
-          
+
           const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
           const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
           const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-          
+
           if (serviceId && templateId && publicKey) {
             await emailjs.send(
               serviceId,
@@ -104,9 +91,7 @@ export const AuthModal: React.FC<{
             );
             showToast('Verification code sent to your email.', 'info');
           } else {
-            console.log('EmailJS variables missing, simulating email send.');
-            console.log(`[MOCK EMAIL] To: ${email}, Verification Code: ${otp}`);
-            alert(`[DEMO MODE] Verification code is: ${otp}`);
+            showToast(`Verification code: ${otp}`, 'info');
           }
           setMode('verify');
         } catch (err: any) {
@@ -123,61 +108,50 @@ export const AuthModal: React.FC<{
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otpInput === generatedOtp) {
-       setIsLoading(true);
-       try {
-         const success = await signUp({
-           email,
-           password,
-           full_name: fullName,
-           company,
-           role,
-         });
-         if (success) {
-           setActivePage('dashboard');
-           onClose();
-         }
-       } finally {
-         setIsLoading(false);
-       }
+      setIsLoading(true);
+      try {
+        const success = await signUp({
+          email,
+          password,
+          full_name: fullName,
+          company,
+          role: 'user',
+        });
+        if (success) {
+          setActivePage('dashboard');
+          onClose();
+        }
+      } finally {
+        setIsLoading(false);
+      }
     } else {
-       setOtpError('Invalid verification code. Please try again.');
+      setOtpError('Invalid verification code. Please try again.');
     }
-  };
-
-  const handleQuickDemo = (demoRole: UserRole) => {
-    switchDemoUser(demoRole);
-    setViewRole(demoRole);
-    setActivePage('dashboard');
-    onClose();
   };
 
   return (
     <div
       id="auth-modal-overlay"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-xs transition-opacity duration-200"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-xs transition-opacity duration-200"
     >
-      <motion.div
+      <div
         id="auth-modal"
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        className="panel max-h-[92vh] w-full max-w-md overflow-y-auto p-6 shadow-2xl bg-surface border-border"
+        className="calm-fade-slide max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white border border-[#e2dfd9] p-6 shadow-xl text-[#262523]"
       >
-        <div className="flex items-center justify-between pb-3 border-b border-border/60">
+        <div className="flex items-center justify-between pb-3 border-b border-[#ebe9e4]">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+            <div className="grid size-8 place-items-center rounded-lg bg-[#8c6d53] text-white">
               <Bot className="size-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold font-display text-foreground">
+              <h2 className="text-base font-bold text-[#262523]">
                 {mode === 'signin' ? 'Sign in to TechnoResolve' : 'Create your account'}
               </h2>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-[#8c8881] hover:bg-[#f4f4f2] hover:text-[#262523] transition-colors cursor-pointer"
           >
             <X className="size-5" />
           </button>
@@ -185,13 +159,12 @@ export const AuthModal: React.FC<{
 
         {mode !== 'verify' && (
           <>
-            {/* Google Sign In Option */}
             <div className="mt-4">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-border bg-card hover:bg-secondary text-foreground font-semibold py-2.5 px-4 text-xs transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-[#e2dfd9] bg-white hover:bg-[#f4f4f2] text-[#262523] font-semibold py-2.5 px-4 text-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 <svg className="size-4 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -215,24 +188,25 @@ export const AuthModal: React.FC<{
               </button>
             </div>
 
-            <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex-1 border-t border-border"></div>
+            <div className="my-4 flex items-center gap-3 text-xs text-[#8c8881]">
+              <div className="flex-1 border-t border-[#e2dfd9]"></div>
               <span>or continue with email</span>
-              <div className="flex-1 border-t border-border"></div>
+              <div className="flex-1 border-t border-[#e2dfd9]"></div>
             </div>
           </>
         )}
 
-        {/* Credentials Form */}
         {mode === 'verify' ? (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="text-center space-y-1 mb-4">
-               <h3 className="text-sm font-bold text-foreground">Verify Your Email</h3>
-               <p className="text-xs text-muted-foreground">We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>.</p>
+              <h3 className="text-sm font-bold text-[#262523]">Verify Your Email</h3>
+              <p className="text-xs text-[#5c5954]">
+                We sent a 6-digit code to <span className="font-semibold text-[#262523]">{email}</span>.
+              </p>
             </div>
-            
+
             {otpError && (
-              <div className="bg-red-50 text-red-600 p-2 text-xs rounded-lg border border-red-100 text-center flex items-center justify-center gap-1.5">
+              <div className="bg-[#f5efe8] text-[#6e533c] p-2 text-xs rounded-lg border border-[#d6c2b0] text-center flex items-center justify-center gap-1.5">
                 <AlertCircle className="size-3.5" />
                 {otpError}
               </div>
@@ -246,14 +220,14 @@ export const AuthModal: React.FC<{
                 onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"
                 required
-                className="w-32 mx-auto text-center tracking-[0.5em] text-lg font-bold rounded-xl border border-input bg-background py-2 text-foreground outline-none focus:ring-2 focus:ring-ring shadow-sm"
+                className="w-32 mx-auto text-center tracking-[0.5em] text-lg font-bold rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] py-2 text-[#262523] outline-none focus:border-[#8c6d53]"
               />
             </label>
-            
+
             <button
               type="submit"
               disabled={isLoading || otpInput.length !== 6}
-              className="w-full py-2.5 px-4 bg-primary text-primary-foreground rounded-xl text-xs font-semibold transition-all shadow-md disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-[#8c6d53] hover:bg-[#765a43] text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2 calm-btn"
             >
               {isLoading ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -264,7 +238,7 @@ export const AuthModal: React.FC<{
                 </>
               )}
             </button>
-            
+
             <button
               type="button"
               onClick={() => {
@@ -272,7 +246,7 @@ export const AuthModal: React.FC<{
                 setOtpInput('');
                 setOtpError('');
               }}
-              className="w-full mt-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              className="w-full mt-2 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-colors"
             >
               Back to sign up
             </button>
@@ -282,88 +256,69 @@ export const AuthModal: React.FC<{
             {mode === 'signup' && (
               <>
                 <label className="block">
-                  <span className="text-xs font-semibold text-foreground">Full Name</span>
-                <input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Awonke Philibane"
-                  required
-                  className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
-                />
-              </label>
+                  <span className="text-xs font-semibold text-[#262523]">Full Name</span>
+                  <input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="e.g. Awonke Philibane"
+                    required
+                    className="mt-1 w-full rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] focus:bg-white px-3.5 py-2 text-xs text-[#262523] outline-none focus:border-[#8c6d53]"
+                  />
+                </label>
 
-              <label className="block">
-                <span className="text-xs font-semibold text-foreground">Company</span>
-                <input
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  placeholder="e.g. Acme Corp"
-                  className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
-                />
-              </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-[#262523]">Company / Department</span>
+                  <input
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="e.g. Operations"
+                    className="mt-1 w-full rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] focus:bg-white px-3.5 py-2 text-xs text-[#262523] outline-none focus:border-[#8c6d53]"
+                  />
+                </label>
+              </>
+            )}
 
-              <label className="block">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-foreground">Requested Role</span>
-                  <span className="text-[10px] text-amber-600 font-medium">Assigned by Admin</span>
-                </div>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
-                  className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="user">Customer (Self Service)</option>
-                  <option value="technician">Support Technician</option>
-                  <option value="admin">Administrator</option>
-                </select>
-                <span className="text-[11px] text-muted-foreground block mt-1">
-                  Your account will be reviewed by an Administrator to approve and assign your role.
-                </span>
-              </label>
-            </>
-          )}
+            <label className="block">
+              <span className="text-xs font-semibold text-[#262523]">Work Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                required
+                className="mt-1 w-full rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] focus:bg-white px-3.5 py-2 text-xs text-[#262523] outline-none focus:border-[#8c6d53]"
+              />
+            </label>
 
-          <label className="block">
-            <span className="text-xs font-semibold text-foreground">Work Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              required
-              className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
-            />
-          </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-[#262523]">Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="mt-1 w-full rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] focus:bg-white px-3.5 py-2 text-xs text-[#262523] outline-none focus:border-[#8c6d53]"
+              />
+            </label>
 
-          <label className="block">
-            <span className="text-xs font-semibold text-foreground">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="mt-1 w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="mt-2 w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-xs cursor-pointer"
-          >
-            {mode === 'signin' ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="mt-2 w-full rounded-xl bg-[#8c6d53] hover:bg-[#765a43] py-2.5 text-xs font-semibold text-white transition-all cursor-pointer calm-btn"
+            >
+              {mode === 'signin' ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
         )}
 
         {mode !== 'verify' && (
-          <div className="mt-4 text-center text-xs text-muted-foreground">
+          <div className="mt-4 text-center text-xs text-[#5c5954]">
             {mode === 'signin' ? (
               <p>
                 Don't have an account?{' '}
                 <button
                   onClick={() => setMode('signup')}
-                  className="font-semibold text-primary hover:underline cursor-pointer"
+                  className="font-semibold text-[#8c6d53] hover:underline cursor-pointer"
                 >
                   Sign up
                 </button>
@@ -373,7 +328,7 @@ export const AuthModal: React.FC<{
                 Already have an account?{' '}
                 <button
                   onClick={() => setMode('signin')}
-                  className="font-semibold text-primary hover:underline cursor-pointer"
+                  className="font-semibold text-[#8c6d53] hover:underline cursor-pointer"
                 >
                   Sign in
                 </button>
@@ -381,7 +336,7 @@ export const AuthModal: React.FC<{
             )}
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 };

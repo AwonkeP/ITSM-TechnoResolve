@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { TicketCategory, Ticket } from '../types';
-import { CATEGORIES, FAQ_ITEMS, getCategoryLabel, formatStatus } from '../data/seedData';
+import { FAQ_ITEMS, getCategoryLabel } from '../data/seedData';
 import {
   Home,
   Ticket as TicketIcon,
@@ -21,48 +21,147 @@ import {
   CheckCircle2,
   FileText,
   Shield,
-  Check,
   Sparkles,
+  Pencil,
+  Save,
+  X,
+  Phone,
+  Building2,
+  Mail,
 } from 'lucide-react';
 import { RoleSwitcher } from './RoleSwitcher';
 import { NewTicketModal } from './NewTicketModal';
 import { TicketChatModal } from './TicketChatModal';
 import { HelpdeskAssistant } from './HelpdeskAssistant';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAnimatedCounter, animateCalmFadeSlide, triggerElementPop } from '../utils/jsAnimations';
 
 export const CustomerPortal: React.FC = () => {
   const {
     currentUser,
     tickets,
-    unreadCounts,
     signOut,
     unreadNotificationsCount,
     setIsNotificationCenterOpen,
+    updateCurrentUserProfile,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'home' | 'tickets' | 'account' | 'help'>('home');
   const [helpSubTab, setHelpSubTab] = useState<'assistant' | 'faq'>('assistant');
   const [searchQuery, setSearchQuery] = useState('');
+  const [homeSearchQuery, setHomeSearchQuery] = useState('');
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   const [preselectedCategory, setPreselectedCategory] = useState<TicketCategory | undefined>();
   const [preselectedTitle, setPreselectedTitle] = useState<string | undefined>();
   const [preselectedDescription, setPreselectedDescription] = useState<string | undefined>();
   const [activeChatTicket, setActiveChatTicket] = useState<Ticket | null>(null);
 
-  const handleOpenNewTicket = (prefill?: { category?: TicketCategory; title?: string; description?: string }) => {
+  // Account Profile Editing State
+  const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [editFullName, setEditFullName] = useState(currentUser?.full_name || '');
+  const [editEmail, setEditEmail] = useState(currentUser?.email || '');
+  const [editCompany, setEditCompany] = useState(currentUser?.company || '');
+  const [editPhone, setEditPhone] = useState(currentUser?.phone || '');
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const accountCardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (currentUser && !isEditingAccount) {
+      setEditFullName(currentUser.full_name || '');
+      setEditEmail(currentUser.email || '');
+      setEditCompany(currentUser.company || '');
+      setEditPhone(currentUser.phone || '');
+    }
+  }, [currentUser, isEditingAccount]);
+
+  const handleStartEditAccount = () => {
+    setEditFullName(currentUser?.full_name || 'Awonke Philibane');
+    setEditEmail(currentUser?.email || 'philibaneawonke@gmail.com');
+    setEditCompany(currentUser?.company || 'Acme Enterprise');
+    setEditPhone(currentUser?.phone || '');
+    setIsEditingAccount(true);
+    animateCalmFadeSlide(accountCardRef.current);
+  };
+
+  const handleCancelEditAccount = () => {
+    setEditFullName(currentUser?.full_name || '');
+    setEditEmail(currentUser?.email || '');
+    setEditCompany(currentUser?.company || '');
+    setEditPhone(currentUser?.phone || '');
+    setIsEditingAccount(false);
+  };
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFullName.trim() || !editEmail.trim()) return;
+    setIsSavingAccount(true);
+    try {
+      const ok = await updateCurrentUserProfile({
+        full_name: editFullName,
+        email: editEmail,
+        company: editCompany,
+        phone: editPhone,
+      });
+      if (ok) {
+        setIsEditingAccount(false);
+        triggerElementPop(accountCardRef.current);
+      }
+    } finally {
+      setIsSavingAccount(false);
+    }
+  };
+
+  const tabContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    animateCalmFadeSlide(tabContainerRef.current);
+  }, [activeTab, helpSubTab]);
+
+  const handleOpenNewTicket = (prefill?: {
+    category?: TicketCategory;
+    title?: string;
+    description?: string;
+  }) => {
     setPreselectedCategory(prefill?.category);
     setPreselectedTitle(prefill?.title);
     setPreselectedDescription(prefill?.description);
     setIsNewTicketOpen(true);
   };
 
-  // Tickets for current user or all general demo tickets
+  // Tickets for current user (Admins inspecting Customer Portal have access to all tickets; Customers only see their own)
   const myTickets = useMemo(() => {
     return tickets.filter((t) => {
-      if (!currentUser) return true;
+      if (!currentUser) return false;
+      if (currentUser.role === 'admin') return true;
       return t.requester_id === currentUser.id || t.requester_email === currentUser.email;
     });
   }, [tickets, currentUser]);
+
+  // Filtered recent tickets on home when typing in home search bar
+  const filteredHomeTickets = useMemo(() => {
+    if (!homeSearchQuery.trim()) return myTickets.slice(0, 5);
+    const q = homeSearchQuery.toLowerCase();
+    return myTickets
+      .filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.id.toLowerCase().includes(q) ||
+          t.category.toLowerCase().includes(q) ||
+          t.description.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  }, [myTickets, homeSearchQuery]);
+
+  // Quiet JavaScript requestAnimationFrame Counters
+  const totalTicketsCount = useAnimatedCounter(myTickets.length, 400);
+  const inProgressCount = useAnimatedCounter(
+    myTickets.filter((t) => t.status === 'in_progress' || t.status === 'new' || t.status === 'escalated').length,
+    400
+  );
+  const resolvedTicketsCount = useAnimatedCounter(
+    myTickets.filter((t) => t.status === 'resolved' || t.status === 'closed').length,
+    400
+  );
 
   // Filter FAQ items
   const filteredFaqs = useMemo(() => {
@@ -73,30 +172,31 @@ export const CustomerPortal: React.FC = () => {
     );
   }, [searchQuery]);
 
+  // Light green strictly for resolved/success; calm warm brown/grey for active states
   const getStatusPill = (status: string) => {
     if (status === 'resolved' || status === 'closed') {
       return (
-        <span className="rounded-full bg-emerald-100 text-emerald-700 px-3.5 py-1 text-xs font-semibold">
+        <span className="rounded-md bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] px-2.5 py-0.5 text-xs font-semibold">
           Resolved
         </span>
       );
     }
     if (status === 'in_progress') {
       return (
-        <span className="rounded-full bg-sky-100 text-sky-700 px-3.5 py-1 text-xs font-semibold">
+        <span className="rounded-md bg-[#f5efe8] text-[#6e533c] border border-[#e3d5c5] px-2.5 py-0.5 text-xs font-semibold">
           In Progress
         </span>
       );
     }
     if (status === 'escalated') {
       return (
-        <span className="rounded-full bg-rose-100 text-rose-700 px-3.5 py-1 text-xs font-semibold">
+        <span className="rounded-md bg-[#ebe5df] text-[#5c4433] border border-[#d6c7b8] px-2.5 py-0.5 text-xs font-semibold">
           Escalated
         </span>
       );
     }
     return (
-      <span className="rounded-full bg-blue-100 text-blue-700 px-3.5 py-1 text-xs font-semibold">
+      <span className="rounded-md bg-[#ebe9e4] text-stone-700 border border-[#dad7d0] px-2.5 py-0.5 text-xs font-medium">
         Open
       </span>
     );
@@ -104,29 +204,38 @@ export const CustomerPortal: React.FC = () => {
 
   const userName = currentUser?.full_name?.split(' ')[0] || 'Awonke';
 
+  const handleHomeSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!homeSearchQuery.trim()) return;
+    setSearchQuery(homeSearchQuery);
+    setActiveTab('help');
+    setHelpSubTab('faq');
+  };
+
   return (
-    <div id="customer-portal" className="min-h-screen bg-[#edf5fd] text-slate-900 flex flex-col font-sans">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-700/50 bg-[#1a4043] text-white shadow-md">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div id="customer-portal" className="min-h-screen bg-[#f4f4f2] text-stone-800 flex flex-col font-sans">
+      {/* Top Header - Calm White & Stone */}
+      <header className="sticky top-0 z-30 border-b border-[#e2dfd9] bg-white text-stone-800">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div
-              style={{ color: '#000000', borderColor: '#000000', backgroundColor: '#ffffff', width: '40px' }}
-              className="grid size-10 place-items-center rounded-lg bg-white text-black border border-black shadow-sm"
-            >
-              <Bot style={{ width: '40px', height: '40px' }} className="size-10 text-black p-1" />
+            <div className="grid size-9 place-items-center rounded-lg bg-[#f5efe8] text-[#8c6d53] border border-[#e3d5c5]">
+              <Bot className="size-5 text-[#8c6d53]" />
             </div>
-            <span className="font-bold text-white text-base tracking-tight">
+            <span className="font-bold text-stone-800 text-base tracking-tight whitespace-nowrap shrink-0">
               TechnoResolve Desk
             </span>
           </div>
 
-          {/* Center Navigation Tabs with High-Visibility Icons */}
-          <nav className="hidden md:flex items-center gap-1.5 bg-black/20 p-1 rounded-full border border-white/10">
+          {/* Center Navigation Tabs */}
+          <nav className="hidden md:flex items-center gap-1 bg-[#f4f4f2] p-1 rounded-full border border-[#e2dfd9]">
             {[
               { id: 'home', label: 'Home', icon: Home },
-              { id: 'tickets', label: `My Tickets${myTickets.length > 0 ? ` (${myTickets.length})` : ''}`, icon: TicketIcon },
+              {
+                id: 'tickets',
+                label: `My Tickets${myTickets.length > 0 ? ` (${myTickets.length})` : ''}`,
+                icon: TicketIcon,
+              },
               { id: 'account', label: 'Account', icon: UserIcon },
               { id: 'help', label: 'Help Centre', icon: HelpCircle },
             ].map((tab) => {
@@ -136,13 +245,13 @@ export const CustomerPortal: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`relative flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 cursor-pointer ${
+                  className={`calm-btn flex items-center gap-2 px-4 py-1.5 text-xs rounded-full cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'bg-white text-[#0f3b6c] font-bold shadow-md'
-                      : 'text-slate-200 hover:text-white hover:bg-white/10'
+                      ? 'bg-[#8c6d53] text-white font-semibold shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-white/70 font-medium'
                   }`}
                 >
-                  <Icon className={`size-4 ${isActive ? 'text-[#0f3b6c] stroke-[2.5]' : 'text-slate-300 stroke-[2]'}`} />
+                  <Icon className={`size-4 ${isActive ? 'text-white' : 'text-[#8c6d53]'}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -155,23 +264,23 @@ export const CustomerPortal: React.FC = () => {
             <button
               onClick={() => setIsNotificationCenterOpen(true)}
               title="Notifications"
-              className="relative p-2 rounded-lg text-slate-200 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+              className="calm-btn relative p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-[#f4f4f2] border border-transparent hover:border-[#e2dfd9] cursor-pointer"
             >
               <Bell className="size-4.5" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 size-4 rounded-full bg-[#22c55e] text-white text-[10px] font-extrabold grid place-items-center shadow-xs ring-2 ring-[#0f3b6c]">
+                <span className="absolute top-0.5 right-0.5 size-4 rounded-full bg-[#8c6d53] text-white text-[10px] font-bold grid place-items-center tabular-nums">
                   {unreadNotificationsCount}
                 </span>
               )}
             </button>
 
-            {/* Role Switcher */}
-            <RoleSwitcher />
+            {/* Role Switcher (Admin Only) */}
+            {currentUser?.role === 'admin' && <RoleSwitcher />}
 
             {/* Sign Out Button */}
             <button
               onClick={signOut}
-              className="flex items-center gap-1.5 text-slate-200 hover:text-rose-300 text-xs font-semibold px-2.5 py-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              className="calm-btn flex items-center gap-1.5 text-stone-600 hover:text-stone-900 text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-[#f4f4f2] cursor-pointer whitespace-nowrap shrink-0"
             >
               <span className="hidden sm:inline">Sign out</span>
               <LogOut className="size-3.5" />
@@ -180,7 +289,7 @@ export const CustomerPortal: React.FC = () => {
         </div>
 
         {/* Mobile Navigation Row */}
-        <div className="md:hidden flex items-center justify-around border-t border-white/10 bg-[#0c2f56] px-3 py-2 text-xs">
+        <div className="md:hidden flex items-center justify-around border-t border-[#e2dfd9] bg-[#fafaf9] px-3 py-2 text-xs">
           {[
             { id: 'home', label: 'Home', icon: Home },
             { id: 'tickets', label: `Tickets (${myTickets.length})`, icon: TicketIcon },
@@ -193,13 +302,13 @@ export const CustomerPortal: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 font-semibold rounded-full transition-all ${
+                className={`calm-btn flex items-center gap-1.5 px-3 py-1.5 font-medium rounded-full whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'bg-white text-[#0f3b6c] font-bold shadow-xs'
-                    : 'text-slate-200 hover:bg-white/10'
+                    ? 'bg-[#8c6d53] text-white font-semibold'
+                    : 'text-stone-600 hover:bg-[#ebe9e4]'
                 }`}
               >
-                <Icon className={`size-3.5 ${isActive ? 'text-[#0f3b6c]' : 'text-slate-300'}`} />
+                <Icon className={`size-3.5 ${isActive ? 'text-white' : 'text-[#8c6d53]'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -208,191 +317,198 @@ export const CustomerPortal: React.FC = () => {
       </header>
 
       {/* Main Content View Container */}
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 md:py-12">
+      <main ref={tabContainerRef} className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 md:py-10">
         <AnimatePresence mode="wait">
           {/* HOME TAB */}
           {activeTab === 'home' && (
             <motion.div
               key="home"
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-8"
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="space-y-7"
             >
               {/* Header / Search */}
-              <div className="space-y-5">
-                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                  Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {userName}
-                </h1>
-                
-                {/* Search Bar - Aesthetic */}
-                <div className="relative group">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
+                      Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {userName}
+                    </h1>
+                    <p className="text-xs text-stone-600 mt-1">
+                      Submit a support request or check the status of your open tickets.
+                    </p>
+                  </div>
+
+                  {/* Calm Counter Summary Strip */}
+                  <div className="flex items-center gap-3 bg-white border border-[#e2dfd9] rounded-xl px-4 py-2">
+                    <div className="text-center px-1.5">
+                      <p className="text-base font-bold text-stone-800 tabular-nums">{totalTicketsCount}</p>
+                      <p className="text-[10px] font-medium text-stone-500">Total</p>
+                    </div>
+                    <div className="h-6 w-px bg-[#e2dfd9]" />
+                    <div className="text-center px-1.5">
+                      <p className="text-base font-bold text-[#8c6d53] tabular-nums">{inProgressCount}</p>
+                      <p className="text-[10px] font-medium text-stone-500">Active</p>
+                    </div>
+                    <div className="h-6 w-px bg-[#e2dfd9]" />
+                    <div className="text-center px-1.5">
+                      <p className="text-base font-bold text-[#2f6b45] tabular-nums">{resolvedTicketsCount}</p>
+                      <p className="text-[10px] font-medium text-stone-500">Resolved</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Bar */}
+                <form onSubmit={handleHomeSearchSubmit} className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Search className="size-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Search className="size-4.5 text-stone-400 group-focus-within:text-[#8c6d53] transition-colors" />
                   </div>
                   <input
                     type="text"
-                    className="w-full bg-white border border-slate-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                    placeholder="Search knowledge base, error codes, or ask AI..."
+                    value={homeSearchQuery}
+                    onChange={(e) => setHomeSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-[#e2dfd9] rounded-xl py-3 pl-11 pr-24 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#8c6d53]/20 focus:border-[#8c6d53] transition-all"
+                    placeholder="Filter your tickets or search the knowledge base..."
                   />
-                  <div className="absolute inset-y-0 right-2 flex items-center">
-                    <button className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+                  <div className="absolute inset-y-0 right-2 flex items-center gap-1">
+                    {homeSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setHomeSearchQuery('')}
+                        className="text-xs text-stone-400 hover:text-stone-700 px-2 py-1 cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className="calm-btn bg-[#f4f4f2] hover:bg-[#ebe9e4] text-stone-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[#e2dfd9] cursor-pointer"
+                    >
                       Search
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
 
-              {/* Quick Actions (Category Shortcuts) */}
+              {/* Category Shortcuts - Unified Calm White & Light Brown */}
               <div>
                 <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Category Shortcuts
-                    </h2>
-                    <span className="text-[11px] font-semibold text-teal-800 bg-teal-100/80 border border-teal-200 px-2 py-0.5 rounded-full">
-                      Shortcuts
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-500 hidden sm:inline">
-                    Select a shortcut to open a pre-categorized ticket
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                    Category Shortcuts
+                  </h2>
+                  <span className="text-xs text-stone-500 hidden sm:inline">
+                    Select a category to open a pre-filled request
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <motion.button
-                    whileHover={{ y: -3, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setPreselectedCategory('hardware');
-                      setIsNewTicketOpen(true);
-                    }}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col items-start gap-3 hover:border-blue-400 hover:shadow-md transition-all group text-left cursor-pointer"
-                  >
-                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <Laptop className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Hardware</h3>
-                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Devices & Peripherals</p>
-                    </div>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ y: -3, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setPreselectedCategory('software');
-                      setIsNewTicketOpen(true);
-                    }}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col items-start gap-3 hover:border-purple-400 hover:shadow-md transition-all group text-left cursor-pointer"
-                  >
-                    <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                      <Wifi className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Software</h3>
-                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Apps & Access</p>
-                    </div>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ y: -3, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setPreselectedCategory('access');
-                      setIsNewTicketOpen(true);
-                    }}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col items-start gap-3 hover:border-amber-400 hover:shadow-md transition-all group text-left cursor-pointer"
-                  >
-                    <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                      <KeyRound className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Access</h3>
-                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Passwords & VPN</p>
-                    </div>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ y: -3, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setPreselectedCategory('billing');
-                      setIsNewTicketOpen(true);
-                    }}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col items-start gap-3 hover:border-emerald-400 hover:shadow-md transition-all group text-left cursor-pointer"
-                  >
-                    <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                      <CreditCard className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Billing</h3>
-                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Invoices & Cards</p>
-                    </div>
-                  </motion.button>
+                  {[
+                    {
+                      category: 'hardware' as TicketCategory,
+                      title: 'Hardware',
+                      sub: 'Devices & Peripherals',
+                      icon: Laptop,
+                    },
+                    {
+                      category: 'software' as TicketCategory,
+                      title: 'Software',
+                      sub: 'Apps & Licensing',
+                      icon: Wifi,
+                    },
+                    {
+                      category: 'access' as TicketCategory,
+                      title: 'Access',
+                      sub: 'Passwords & VPN',
+                      icon: KeyRound,
+                    },
+                    {
+                      category: 'billing' as TicketCategory,
+                      title: 'Billing',
+                      sub: 'Invoices & Accounts',
+                      icon: CreditCard,
+                    },
+                  ].map((card) => {
+                    const Icon = card.icon;
+                    return (
+                      <button
+                        key={card.category}
+                        onClick={() => {
+                          setPreselectedCategory(card.category);
+                          setIsNewTicketOpen(true);
+                        }}
+                        className="calm-card-hover bg-white border border-[#e2dfd9] rounded-xl p-4 flex flex-col items-start gap-3 group text-left cursor-pointer"
+                      >
+                        <div className="p-2.5 rounded-lg bg-[#f5efe8] text-[#8c6d53] group-hover:bg-[#8c6d53] group-hover:text-white transition-colors duration-150">
+                          <Icon className="size-4.5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-stone-800 text-sm">{card.title}</h3>
+                          <p className="text-[11px] text-stone-500 line-clamp-1 mt-0.5">{card.sub}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* General Request & AI Banner */}
+              {/* Primary Action & Calm AI Triage Card */}
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                 <button
                   onClick={() => {
                     setPreselectedCategory(undefined);
                     setIsNewTicketOpen(true);
                   }}
-                  className="sm:col-span-2 bg-[#1a4043] hover:bg-[#143235] text-white rounded-2xl p-5 flex flex-col justify-center items-center gap-2 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                  className="calm-card-hover sm:col-span-2 bg-[#8c6d53] hover:bg-[#765a43] text-white rounded-xl p-5 flex flex-col justify-center items-center gap-2 border border-[#765a43] cursor-pointer"
                 >
-                  <Plus className="size-6 stroke-[2.5] text-white group-hover:scale-110 transition-transform" />
-                  <span className="font-bold text-sm text-white">Add New Ticket</span>
+                  <Plus className="size-5 stroke-[2.5] text-white" />
+                  <span className="font-semibold text-sm text-white">Add New Ticket</span>
                 </button>
-                
-                <div className="sm:col-span-3 bg-[#1a4043] hover:bg-[#143235] transition-colors rounded-2xl p-5 text-white flex items-center justify-between relative overflow-hidden shadow-sm">
-                  <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-                  <div className="absolute left-0 bottom-0 w-24 h-24 bg-teal-300/15 rounded-full blur-2xl -ml-5 -mb-5"></div>
-                  <div className="relative z-10 space-y-1">
-                    <h3 className="font-bold text-white flex items-center gap-2">
-                      <Sparkles className="size-4 text-teal-200" /> AI Triage Active
+
+                <div className="sm:col-span-3 bg-[#f5efe8] border border-[#e3d5c5] rounded-xl p-5 text-stone-800 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-stone-800 text-sm flex items-center gap-2">
+                      <Sparkles className="size-4 text-[#8c6d53]" /> Automated Triage Active
                     </h3>
-                    <p className="text-xs text-teal-100 leading-relaxed max-w-[200px] sm:max-w-[250px]">
-                      Your requests are instantly analyzed and routed by Gemini to the fastest available agent.
+                    <p className="text-xs text-stone-600 leading-relaxed max-w-[260px]">
+                      Requests are quietly categorized and routed to the appropriate support specialist.
                     </p>
                   </div>
-                  <div className="relative z-10 shrink-0 text-white/30">
-                    <Bot className="size-12 sm:size-16" />
+                  <div className="shrink-0 text-[#8c6d53]/40">
+                    <Bot className="size-10 sm:size-12" />
                   </div>
                 </div>
               </div>
 
-              {/* Recent Activity Header */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-3.5">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Recent Activity
+              {/* Recent Activity */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                    Recent Activity {homeSearchQuery && `· Filtered (${filteredHomeTickets.length})`}
                   </h2>
-                  <button 
+                  <button
                     onClick={() => setActiveTab('tickets')}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                    className="text-xs font-semibold text-[#8c6d53] hover:text-[#6e533c] cursor-pointer flex items-center gap-1"
                   >
-                    View All
+                    <span>View All</span>
+                    <ChevronRight className="size-3.5" />
                   </button>
                 </div>
 
-                {/* Ticket Cards Stack */}
-                <div className="space-y-3">
-                  {myTickets.slice(0, 5).map((ticket, index) => (
-                    <motion.div
+                <div className="space-y-2.5">
+                  {filteredHomeTickets.map((ticket) => (
+                    <div
                       key={ticket.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ y: -2, shadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                       onClick={() => setActiveChatTicket(ticket)}
-                      className="bg-white border border-slate-200/80 rounded-xl p-4.5 shadow-xs hover:border-slate-300 transition-all flex items-center justify-between cursor-pointer group"
+                      className="calm-card-hover bg-white border border-[#e2dfd9] rounded-xl p-4 flex items-center justify-between cursor-pointer group"
                     >
                       <div className="space-y-1 pr-4">
-                        <h3 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                        <h3 className="font-semibold text-stone-800 text-sm group-hover:text-[#8c6d53] transition-colors">
                           {ticket.title}
                         </h3>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-stone-500 tabular-nums">
+                          <span className="font-mono font-medium text-stone-600">{ticket.id}</span> ·{' '}
                           {getCategoryLabel(ticket.category)} ·{' '}
                           {new Date(ticket.created_at).toISOString().slice(0, 10).replace(/-/g, '/')}
                         </p>
@@ -400,15 +516,22 @@ export const CustomerPortal: React.FC = () => {
 
                       <div className="shrink-0 flex items-center gap-3">
                         {getStatusPill(ticket.status)}
+                        <ChevronRight className="size-4 text-stone-400 group-hover:text-[#8c6d53] transition-colors" />
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
 
-                  {myTickets.length === 0 && (
-                    <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500">
-                      <FileText className="size-8 mx-auto text-slate-400 mb-2" />
-                      <p className="text-sm font-semibold text-slate-800">No requests yet</p>
-                      <p className="text-xs mt-1">Submit your first request above to get instant help.</p>
+                  {filteredHomeTickets.length === 0 && (
+                    <div className="bg-white border border-[#e2dfd9] rounded-xl p-8 text-center text-stone-500">
+                      <FileText className="size-7 mx-auto text-stone-400 mb-2" />
+                      <p className="text-sm font-semibold text-stone-800">
+                        {homeSearchQuery ? `No tickets matching "${homeSearchQuery}"` : 'No requests yet'}
+                      </p>
+                      <p className="text-xs mt-1">
+                        {homeSearchQuery
+                          ? 'Try clearing your filter or press Enter to search the Knowledge Base.'
+                          : 'Submit your first request above to get help from our support team.'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -420,20 +543,22 @@ export const CustomerPortal: React.FC = () => {
           {activeTab === 'tickets' && (
             <motion.div
               key="tickets"
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-4"
             >
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <div className="flex items-center justify-between pb-3 border-b border-[#e2dfd9]">
                 <div>
-                  <h1 className="text-2xl font-extrabold text-slate-900">My Tickets</h1>
-                  <p className="text-xs text-slate-500">View progress and chat directly with technicians</p>
+                  <h1 className="text-2xl font-bold text-stone-900">My Tickets</h1>
+                  <p className="text-xs text-stone-500">
+                    Review progress and communicate with your assigned technician
+                  </p>
                 </div>
                 <button
                   onClick={() => setIsNewTicketOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-xs cursor-pointer"
+                  className="calm-btn inline-flex items-center gap-1.5 rounded-lg bg-[#8c6d53] px-4 py-2 text-xs font-semibold text-white hover:bg-[#765a43] cursor-pointer"
                 >
                   <Plus className="size-4" />
                   <span>New Ticket</span>
@@ -442,42 +567,48 @@ export const CustomerPortal: React.FC = () => {
 
               <div className="space-y-3">
                 {myTickets.map((ticket) => (
-                  <motion.div
+                  <div
                     key={ticket.id}
-                    whileHover={{ y: -2 }}
                     onClick={() => setActiveChatTicket(ticket)}
-                    className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs hover:border-blue-400 transition-all cursor-pointer space-y-3"
+                    className="calm-card-hover bg-white border border-[#e2dfd9] rounded-xl p-5 cursor-pointer space-y-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-xs font-bold text-slate-500">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="font-mono text-xs font-semibold text-stone-500 tabular-nums">
                             {ticket.id}
                           </span>
                           {getStatusPill(ticket.status)}
-                          <span className="rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-[11px] font-semibold">
-                            {getCategoryLabel(ticket.category)}
+                          <span className="text-xs text-stone-500">
+                            · {getCategoryLabel(ticket.category)}
                           </span>
                         </div>
-                        <h2 className="text-base font-bold text-slate-900">{ticket.title}</h2>
+                        <h2 className="text-base font-semibold text-stone-900">{ticket.title}</h2>
                       </div>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-stone-400 tabular-nums">
                         {new Date(ticket.created_at).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">
                       {ticket.description}
                     </p>
 
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                      <span>Priority: <strong className="capitalize text-slate-800">{ticket.priority}</strong></span>
-                      <span className="text-blue-600 font-semibold flex items-center gap-1">
+                    <div className="pt-3 border-t border-[#f0eee9] flex items-center justify-between text-xs text-stone-500">
+                      <span>
+                        Priority: <strong className="capitalize text-stone-700">{ticket.priority}</strong>
+                        {ticket.assigned_name && (
+                          <span className="ml-3">
+                            Agent: <strong className="text-stone-700">{ticket.assigned_name}</strong>
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[#8c6d53] font-semibold flex items-center gap-1">
                         <MessageSquare className="size-3.5" />
-                        Chat with Technician
+                        Open Conversation
                       </span>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </motion.div>
@@ -487,56 +618,172 @@ export const CustomerPortal: React.FC = () => {
           {activeTab === 'account' && (
             <motion.div
               key="account"
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-4"
             >
-              <div className="space-y-1">
-                <h1 className="text-2xl font-extrabold text-slate-900">Account Profile</h1>
-                <p className="text-xs text-slate-500">Manage account information and subscription status</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-bold text-stone-900">Account Profile</h1>
+                  <p className="text-xs text-stone-500">
+                    View and update your personal details, organization, and contact preferences
+                  </p>
+                </div>
+
+                {!isEditingAccount && (
+                  <button
+                    onClick={handleStartEditAccount}
+                    className="calm-btn inline-flex items-center gap-2 rounded-lg bg-[#8c6d53] hover:bg-[#765a43] text-white px-4 py-2 text-xs font-semibold cursor-pointer self-start sm:self-auto"
+                  >
+                    <Pencil className="size-3.5" />
+                    <span>Edit Profile</span>
+                  </button>
+                )}
               </div>
 
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                  <span className="text-xs font-semibold uppercase text-slate-400">Full Name</span>
-                  <span className="text-sm font-bold text-slate-800">{currentUser?.full_name || 'Awonke Philibane'}</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                  <span className="text-xs font-semibold uppercase text-slate-400">Email Address</span>
-                  <span className="text-sm font-medium text-slate-800">{currentUser?.email || 'philibaneawonke@gmail.com'}</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                  <span className="text-xs font-semibold uppercase text-slate-400">Company / Organization</span>
-                  <span className="text-sm font-medium text-slate-800">{currentUser?.company || 'Acme Enterprise'}</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                  <span className="text-xs font-semibold uppercase text-slate-400">Account Role</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                      currentUser?.role === 'admin' 
-                        ? 'bg-amber-100 text-amber-800' 
-                        : currentUser?.role === 'technician' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-slate-100 text-slate-800'
-                    }`}>
-                      {currentUser?.role === 'admin' && <Shield className="size-3 text-amber-600" />}
-                      <span className="capitalize">{currentUser?.role || 'user'}</span>
-                    </span>
-                    <RoleSwitcher />
+              <div
+                ref={accountCardRef}
+                className="bg-white border border-[#e2dfd9] rounded-xl p-6 space-y-5"
+              >
+                {isEditingAccount ? (
+                  <form onSubmit={handleSaveAccount} className="space-y-4 calm-fade-slide">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-700">
+                          <UserIcon className="size-3.5 text-[#8c6d53]" />
+                          <span>Full Name</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={128}
+                          value={editFullName}
+                          onChange={(e) => setEditFullName(e.target.value)}
+                          placeholder="Your full name"
+                          className="w-full rounded-lg border border-[#e2dfd9] bg-[#fafaf9] focus:bg-white px-3.5 py-2 text-sm text-stone-800 outline-none focus:border-[#8c6d53] transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-700">
+                          <Mail className="size-3.5 text-[#8c6d53]" />
+                          <span>Email Address</span>
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          maxLength={256}
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="you@company.com"
+                          className="w-full rounded-lg border border-[#e2dfd9] bg-[#fafaf9] focus:bg-white px-3.5 py-2 text-sm text-stone-800 outline-none focus:border-[#8c6d53] transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-700">
+                          <Building2 className="size-3.5 text-[#8c6d53]" />
+                          <span>Company / Organization</span>
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={128}
+                          value={editCompany}
+                          onChange={(e) => setEditCompany(e.target.value)}
+                          placeholder="Company or department"
+                          className="w-full rounded-lg border border-[#e2dfd9] bg-[#fafaf9] focus:bg-white px-3.5 py-2 text-sm text-stone-800 outline-none focus:border-[#8c6d53] transition-colors"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-700">
+                          <Phone className="size-3.5 text-[#8c6d53]" />
+                          <span>Phone Number</span>
+                        </label>
+                        <input
+                          type="tel"
+                          maxLength={32}
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="+27 (0) 00 000 0000"
+                          className="w-full rounded-lg border border-[#e2dfd9] bg-[#fafaf9] focus:bg-white px-3.5 py-2 text-sm text-stone-800 outline-none focus:border-[#8c6d53] transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#f0eee9]">
+                      <button
+                        type="button"
+                        onClick={handleCancelEditAccount}
+                        disabled={isSavingAccount}
+                        className="calm-btn inline-flex items-center gap-1.5 rounded-lg border border-[#e2dfd9] bg-white hover:bg-[#f4f4f2] text-stone-700 px-4 py-2 text-xs font-semibold cursor-pointer"
+                      >
+                        <X className="size-3.5" />
+                        <span>Cancel</span>
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingAccount}
+                        className="calm-btn inline-flex items-center gap-1.5 rounded-lg bg-[#8c6d53] hover:bg-[#765a43] text-white px-4 py-2 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                      >
+                        <Save className="size-3.5" />
+                        <span>{isSavingAccount ? 'Saving...' : 'Save Changes'}</span>
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Full Name</span>
+                      <span className="text-sm font-semibold text-stone-800">
+                        {currentUser?.full_name || 'Awonke Philibane'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Email Address</span>
+                      <span className="text-sm font-medium text-stone-800">
+                        {currentUser?.email || 'philibaneawonke@gmail.com'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Company / Organization</span>
+                      <span className="text-sm font-medium text-stone-800">
+                        {currentUser?.company || 'Acme Enterprise'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Phone Number</span>
+                      <span className="text-sm font-medium text-stone-800">
+                        {currentUser?.phone || 'Not provided'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Account Role</span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[#f5efe8] text-[#6e533c] border border-[#e3d5c5] px-2.5 py-0.5 text-xs font-semibold">
+                          {currentUser?.role === 'admin' && <Shield className="size-3 text-[#8c6d53]" />}
+                          <span className="capitalize">
+                            {currentUser?.role === 'user' || !currentUser?.role ? 'Customer' : currentUser.role}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-[#f0eee9] pb-3.5">
+                      <span className="text-xs font-medium text-stone-500">Membership Tier</span>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] px-2.5 py-0.5 text-xs font-semibold">
+                        <CheckCircle2 className="size-3" /> Enterprise SLA (24/7)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-stone-500">Account Created</span>
+                      <span className="text-xs text-stone-600 tabular-nums">
+                        {new Date(currentUser?.created_at || '2025-04-12').toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                  <span className="text-xs font-semibold uppercase text-slate-400">Membership Tier</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-3 py-0.5 text-xs font-semibold">
-                    <CheckCircle2 className="size-3" /> Enterprise SLA (24/7)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase text-slate-400">Account Created</span>
-                  <span className="text-xs text-slate-600">{new Date(currentUser?.created_at || '2025-04-12').toLocaleDateString()}</span>
-                </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -545,53 +792,50 @@ export const CustomerPortal: React.FC = () => {
           {activeTab === 'help' && (
             <motion.div
               key="help"
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-4"
             >
-              {/* Header with Sub-tab Switcher & Actions */}
+              {/* Header with Sub-tab Switcher */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2.5">
-                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Help Centre</h1>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1 border border-blue-200 shadow-2xs">
-                      <Sparkles className="size-3 text-blue-600" /> AI-Powered
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">Instant AI troubleshooting, verified technical procedures & ticket dispatch</p>
+                  <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Help Centre</h1>
+                  <p className="text-xs text-stone-500">
+                    Guided troubleshooting, verified IT procedures & ticket creation
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="bg-slate-200/80 p-1 rounded-xl flex items-center border border-slate-300/60 shadow-2xs">
+                  <div className="bg-[#ebe9e4] p-1 rounded-lg flex items-center border border-[#e2dfd9]">
                     <button
                       onClick={() => setHelpSubTab('assistant')}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`calm-btn flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 ${
                         helpSubTab === 'assistant'
-                          ? 'bg-white text-blue-700 shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white text-stone-900 shadow-2xs'
+                          : 'text-stone-600 hover:text-stone-900'
                       }`}
                     >
-                      <Bot className="size-3.5" />
+                      <Bot className="size-3.5 text-[#8c6d53]" />
                       <span>AI Assistant</span>
                     </button>
                     <button
                       onClick={() => setHelpSubTab('faq')}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`calm-btn flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 ${
                         helpSubTab === 'faq'
-                          ? 'bg-white text-blue-700 shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white text-stone-900 shadow-2xs'
+                          : 'text-stone-600 hover:text-stone-900'
                       }`}
                     >
-                      <FileText className="size-3.5" />
+                      <FileText className="size-3.5 text-[#8c6d53]" />
                       <span>Knowledge Base ({FAQ_ITEMS.length})</span>
                     </button>
                   </div>
 
                   <button
                     onClick={() => handleOpenNewTicket()}
-                    className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-xs cursor-pointer"
+                    className="calm-btn hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-[#8c6d53] hover:bg-[#765a43] cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Plus className="size-3.5" />
                     <span>Create Ticket</span>
@@ -602,20 +846,20 @@ export const CustomerPortal: React.FC = () => {
               {/* TAB 1: AI HELPDESK ASSISTANT */}
               {helpSubTab === 'assistant' && (
                 <div className="space-y-4">
-                  <HelpdeskAssistant
-                    onOpenNewTicket={handleOpenNewTicket}
-                  />
+                  <HelpdeskAssistant onOpenNewTicket={handleOpenNewTicket} />
 
                   {/* Knowledge Base Fast Strip */}
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+                  <div className="bg-white border border-[#e2dfd9] rounded-xl p-4 sm:p-5">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <FileText className="size-4 text-blue-600" />
-                        <h3 className="font-bold text-xs sm:text-sm text-slate-900">Verified Knowledge Base Highlights</h3>
+                        <FileText className="size-4 text-[#8c6d53]" />
+                        <h3 className="font-semibold text-xs sm:text-sm text-stone-800">
+                          Verified Knowledge Base Highlights
+                        </h3>
                       </div>
                       <button
                         onClick={() => setHelpSubTab('faq')}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                        className="text-xs font-semibold text-[#8c6d53] hover:text-[#6e533c] flex items-center gap-1 cursor-pointer"
                       >
                         <span>View all articles</span>
                         <ChevronRight className="size-3" />
@@ -630,14 +874,12 @@ export const CustomerPortal: React.FC = () => {
                             setHelpSubTab('faq');
                             setSearchQuery(item.q.slice(0, 20));
                           }}
-                          className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-blue-50/50 hover:border-blue-200 transition-all cursor-pointer group"
+                          className="calm-card-hover p-3 rounded-lg border border-[#e2dfd9] bg-[#fafaf9] hover:bg-[#f5efe8]/50 cursor-pointer group"
                         >
-                          <p className="font-bold text-xs text-slate-800 group-hover:text-blue-700 line-clamp-2 mb-1">
+                          <p className="font-semibold text-xs text-stone-800 group-hover:text-[#6e533c] line-clamp-2 mb-1">
                             {item.q}
                           </p>
-                          <p className="text-[11px] text-slate-500 line-clamp-2">
-                            {item.a}
-                          </p>
+                          <p className="text-[11px] text-stone-500 line-clamp-2">{item.a}</p>
                         </div>
                       ))}
                     </div>
@@ -649,35 +891,42 @@ export const CustomerPortal: React.FC = () => {
               {helpSubTab === 'faq' && (
                 <div className="space-y-4">
                   {/* Search Bar */}
-                  <div className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 shadow-xs flex items-center gap-2.5">
-                    <Search className="size-4 text-slate-400 shrink-0" />
+                  <div className="bg-white border border-[#e2dfd9] rounded-xl px-4 py-3 flex items-center gap-2.5">
+                    <Search className="size-4 text-stone-400 shrink-0" />
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search articles (e.g. Wi-Fi, VPN, password reset)..."
-                      className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                      className="w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400"
                     />
                     {searchQuery && (
-                      <button onClick={() => setSearchQuery('')} className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer">
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="text-xs text-stone-400 hover:text-stone-700 cursor-pointer"
+                      >
                         Clear
                       </button>
                     )}
                   </div>
 
                   {/* Ask Assistant Banner */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="bg-[#f5efe8] border border-[#e3d5c5] rounded-xl p-3.5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-lg bg-blue-600 text-white grid place-items-center shrink-0">
+                      <div className="size-8 rounded-lg bg-[#8c6d53] text-white grid place-items-center shrink-0">
                         <Bot className="size-4" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-900">Need immediate interactive troubleshooting?</p>
-                        <p className="text-[11px] text-slate-600">Chat directly with ResolveBot, our 24/7 AI Helpdesk Assistant.</p>
+                        <p className="text-xs font-semibold text-stone-800">
+                          Need interactive step-by-step troubleshooting?
+                        </p>
+                        <p className="text-[11px] text-stone-600">
+                          Chat directly with ResolveBot, our 24/7 Helpdesk Assistant.
+                        </p>
                       </div>
                     </div>
                     <button
                       onClick={() => setHelpSubTab('assistant')}
-                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 transition-colors shadow-2xs cursor-pointer"
+                      className="calm-btn px-3 py-1.5 rounded-lg bg-[#8c6d53] hover:bg-[#765a43] text-white text-xs font-semibold shrink-0 cursor-pointer"
                     >
                       Chat with Assistant
                     </button>
@@ -688,19 +937,19 @@ export const CustomerPortal: React.FC = () => {
                     {filteredFaqs.map((faq) => (
                       <details
                         key={faq.q}
-                        className="bg-white border border-slate-200/80 rounded-xl p-4.5 group open:border-blue-400 shadow-xs transition-all"
+                        className="bg-white border border-[#e2dfd9] rounded-xl p-4 group open:border-[#c7b6a6] transition-all"
                       >
-                        <summary className="cursor-pointer font-bold text-sm text-slate-900 flex items-center justify-between list-none">
+                        <summary className="cursor-pointer font-semibold text-sm text-stone-800 flex items-center justify-between list-none">
                           <span className="flex items-center gap-2">
-                            <HelpCircle className="size-4 text-blue-600" />
+                            <HelpCircle className="size-4 text-[#8c6d53]" />
                             {faq.q}
                           </span>
-                          <span className="text-xs text-slate-400 group-open:rotate-90 transition-transform">▸</span>
+                          <span className="text-xs text-stone-400 group-open:rotate-90 transition-transform">
+                            ▸
+                          </span>
                         </summary>
-                        <div className="mt-3 pl-6 border-l-2 border-blue-400 space-y-3">
-                          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                            {faq.a}
-                          </p>
+                        <div className="mt-3 pt-3 border-t border-[#f0eee9] space-y-3">
+                          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">{faq.a}</p>
                           <div className="flex items-center gap-2 pt-1">
                             <button
                               onClick={() => {
@@ -710,7 +959,7 @@ export const CustomerPortal: React.FC = () => {
                                   category: faq.category as TicketCategory,
                                 });
                               }}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                              className="text-xs font-semibold text-[#8c6d53] hover:text-[#6e533c] flex items-center gap-1 cursor-pointer"
                             >
                               <Plus className="size-3" />
                               <span>Create support ticket for this</span>
@@ -721,12 +970,17 @@ export const CustomerPortal: React.FC = () => {
                     ))}
 
                     {filteredFaqs.length === 0 && (
-                      <div className="text-center py-10 bg-white rounded-xl border border-slate-200/80 p-6 space-y-2">
-                        <p className="text-sm font-semibold text-slate-700">No articles matched "{searchQuery}"</p>
-                        <p className="text-xs text-slate-500">Try searching for keywords like "VPN", "Wi-Fi", "password", or ask our AI Assistant.</p>
+                      <div className="text-center py-10 bg-white rounded-xl border border-[#e2dfd9] p-6 space-y-2">
+                        <p className="text-sm font-semibold text-stone-700">
+                          No articles matched "{searchQuery}"
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          Try searching for keywords like "VPN", "Wi-Fi", "password", or ask our AI
+                          Assistant.
+                        </p>
                         <button
                           onClick={() => setHelpSubTab('assistant')}
-                          className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer hover:bg-blue-700"
+                          className="calm-btn mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#8c6d53] text-white text-xs font-semibold cursor-pointer hover:bg-[#765a43]"
                         >
                           <Bot className="size-3.5" />
                           <span>Ask AI Assistant instead</span>
@@ -755,11 +1009,7 @@ export const CustomerPortal: React.FC = () => {
         initialDescription={preselectedDescription}
       />
 
-      <TicketChatModal
-        ticket={activeChatTicket}
-        onClose={() => setActiveChatTicket(null)}
-      />
+      <TicketChatModal ticket={activeChatTicket} onClose={() => setActiveChatTicket(null)} />
     </div>
   );
 };
-

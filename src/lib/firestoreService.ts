@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -107,7 +108,7 @@ export async function initializeFirestoreDatabase(): Promise<void> {
   // Legacy seeds were already handled in prior builds
 }
 
-// Check if any registered users exist
+// Check if any registered users exist (-1 on error so failed queries never grant first-user admin)
 export async function getUsersCountFromFirestore(): Promise<number> {
   try {
     const usersCol = collection(db, COLLECTIONS.USERS);
@@ -115,7 +116,22 @@ export async function getUsersCountFromFirestore(): Promise<number> {
     return userSnapshot.size;
   } catch (error) {
     console.warn('Failed to query users count from Firestore:', error);
-    return 0;
+    return -1;
+  }
+}
+
+// Fetch a single user profile directly from Firestore by UID
+export async function getUserFromFirestore(userId: string): Promise<UserProfile | null> {
+  if (!userId) return null;
+  try {
+    const docSnap = await getDoc(doc(db, COLLECTIONS.USERS, userId));
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Failed to fetch user profile from Firestore:', error);
+    return null;
   }
 }
 
@@ -199,12 +215,32 @@ export function subscribeToMessages(userRole: string | undefined, userId: string
   }
 }
 
-// Subscribe to real-time Users
-export function subscribeToUsers(userId: string | undefined, callback: (users: UserProfile[]) => void) {
+// Subscribe to real-time Users (Admins/Technicians receive all users; Customers only subscribe to their own profile)
+export function subscribeToUsers(
+  userId: string | undefined,
+  callback: (users: UserProfile[]) => void,
+  userRole?: string
+) {
   try {
     if (!userId) {
       callback([]);
       return () => {};
+    }
+    if (userRole && userRole !== 'admin' && userRole !== 'technician') {
+      const userDocRef = doc(db, COLLECTIONS.USERS, userId);
+      return onSnapshot(
+        userDocRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            callback([docSnap.data() as UserProfile]);
+          } else {
+            callback([]);
+          }
+        },
+        (error) => {
+          console.warn('User profile snapshot error:', error);
+        }
+      );
     }
     const q = collection(db, COLLECTIONS.USERS);
     return onSnapshot(

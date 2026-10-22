@@ -3,593 +3,389 @@ import { useApp } from '../context/AppContext';
 import {
   Bot,
   ArrowRight,
-  ShieldCheck,
   LifeBuoy,
   Sparkles,
   CheckCircle2,
   Lock,
   Layers,
-  Zap,
-  Clock,
-  BarChart3,
   MessageSquare,
-  SlidersHorizontal,
   FileText,
   PlusCircle,
   TrendingDown,
   Eye,
   Check,
+  HelpCircle,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 
 export const LandingPage: React.FC<{
   onOpenAuth: () => void;
   onOpenNewTicket: () => void;
 }> = ({ onOpenAuth, onOpenNewTicket }) => {
-  const { tickets, currentUser, setActivePage } = useApp();
-
-  const totalTickets = tickets.length;
-  const openTickets = tickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').length;
-  const urgentTickets = tickets.filter(t => t.priority === 'urgent').length;
+  const { currentUser, setActivePage } = useApp();
 
   return (
-    <div id="landing-page" className="min-h-screen bg-[#123333] text-white transition-colors duration-200 overflow-x-hidden font-sans selection:bg-[#00d492]/20">
-      
-      {/* Abstract Ambient Glow Elements */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[55%] h-[55%] rounded-full bg-[#00d492]/10 blur-[130px]" />
-        <div className="absolute top-[35%] -right-[10%] w-[45%] h-[45%] rounded-full bg-[#0f3b6c]/30 blur-[140px]" />
-        <div className="absolute bottom-[10%] left-[20%] w-[40%] h-[40%] rounded-full bg-[#00d492]/5 blur-[120px]" />
-      </div>
-
+    <div id="landing-page" className="min-h-screen bg-[#f4f4f2] text-[#262523] overflow-x-hidden font-sans">
       {/* Top Header */}
-      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 bg-[#123333] text-white border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div
-            style={{ borderColor: '#000000', color: '#000000', backgroundColor: '#ffffff' }}
-            className="grid size-10 place-items-center rounded-xl bg-white border border-black text-black shadow-md font-bold overflow-hidden"
-          >
-            <Bot style={{ height: '40px', width: '40px' }} className="size-10 text-black p-1" />
+      <header className="sticky top-0 z-20 border-b border-[#e2dfd9] bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-xl bg-[#f5efe8] border border-[#d6c2b0] text-[#8c6d53]">
+              <Bot className="size-5" />
+            </div>
+            <span className="text-base font-bold tracking-tight text-[#262523]">TechnoResolve Desk</span>
           </div>
-          <div>
-            <span className="font-display text-lg font-bold tracking-tight text-white">TechnoResolve Desk</span>
+          <div className="flex items-center gap-3">
+            <button
+              id="landing-signin-btn"
+              onClick={() => (currentUser ? setActivePage('dashboard') : onOpenAuth())}
+              className="rounded-xl bg-[#8c6d53] hover:bg-[#765a43] px-5 py-2 text-xs font-semibold text-white transition-all cursor-pointer calm-btn"
+            >
+              {currentUser ? 'Open Support Portal' : 'Sign In'}
+            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-3 md:gap-4">
-          <button
-            id="landing-signin-btn"
-            onClick={() => currentUser ? setActivePage('dashboard') : onOpenAuth()}
-            style={{ color: '#000000' }}
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-black transition-all hover:bg-slate-100 shadow-sm cursor-pointer"
-          >
-            {currentUser ? 'Dashboard' : 'Sign in'}
-          </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main
-        style={{ borderColor: '#585454' }}
-        className="relative z-10 mx-auto max-w-7xl px-6 pb-24 pt-12 md:pt-16 bg-[#123333]"
-      >
-        
-        {/* ================= 1. HERO SECTION ================= */}
-        <div className="max-w-4xl mx-auto text-center space-y-8 mb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Pill style badge */}
-            <span
-              style={{ backgroundColor: '#ffffff', color: '#ffffff' }}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-white border border-white/20 shadow-sm mb-6"
-            >
-              <Sparkles style={{ color: '#ffffff' }} className="size-4 text-white" />
-              ✦ AI ticket classification built in
-            </span>
+      <main className="mx-auto max-w-6xl px-6 pb-20 pt-12 md:pt-16">
+        {/* 1. HERO SECTION */}
+        <div className="max-w-3xl mx-auto text-center space-y-6 mb-16 calm-fade-slide">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#f5efe8] px-3.5 py-1 text-xs font-semibold text-[#6e533c] border border-[#d6c2b0]">
+            <Sparkles className="size-3.5 text-[#8c6d53]" />
+            AI Ticket Classification & Support Desk
+          </span>
 
-            {/* Hero Heading */}
-            <h1 className="text-5xl md:text-7xl leading-[1.08] font-extrabold tracking-tight text-white font-display">
-              Smart IT Service Management
-            </h1>
+          <h1 className="text-4xl md:text-6xl leading-[1.1] font-bold tracking-tight text-[#262523]">
+            Calm, Streamlined IT Service & Support
+          </h1>
 
-            {/* Hero Subheading */}
-            <p className="mt-6 text-lg md:text-xl text-slate-200 leading-relaxed max-w-3xl mx-auto font-medium">
-              TechnoResolve automates ticket classification and priority routing in real time. Seamlessly connect users, support technicians, and IT managers in one centralized operational system.
-            </p>
-          </motion.div>
+          <p className="text-base md:text-lg text-[#5c5954] leading-relaxed max-w-2xl mx-auto">
+            Submit requests in seconds, get instant step-by-step guidance from the AI Helpdesk Assistant, and track your ticket resolution in real time.
+          </p>
 
-          {/* Primary Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2"
-          >
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
               id="hero-get-started-btn"
-              onClick={onOpenAuth}
-              style={{ backgroundColor: '#ffffff', color: '#000000' }}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold transition-all hover:bg-slate-100 shadow-md cursor-pointer"
+              onClick={() => (currentUser ? setActivePage('dashboard') : onOpenAuth())}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] px-7 py-3.5 text-sm font-semibold text-white transition-all cursor-pointer calm-btn"
             >
-              <span style={{ color: '#000000' }} className="text-black">Launch Desk</span>
-              <ArrowRight className="size-4 text-black" />
+              <span>{currentUser ? 'Go to My Portal' : 'Access Support Portal'}</span>
+              <ArrowRight className="size-4" />
             </button>
             <button
               id="hero-submit-request-btn"
               onClick={onOpenNewTicket}
-              style={{ backgroundColor: '#fbfafa', color: '#000000' }}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-8 py-4 text-base font-bold transition-all hover:bg-white shadow-md cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6c2b0] bg-white hover:bg-[#f5efe8] px-7 py-3.5 text-sm font-semibold text-[#6e533c] transition-all cursor-pointer calm-btn"
             >
-              <span style={{ color: '#000000' }} className="text-black font-extrabold">Submit a request</span>
+              <span>Submit a Request</span>
             </button>
-          </motion.div>
+          </div>
 
-          {/* Trust points */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.25 }}
-            className="flex flex-wrap items-center justify-center gap-6 md:gap-8 pt-6 text-sm font-semibold text-white/90"
-          >
-            <span className="flex items-center gap-2">
-              <CheckCircle2 style={{ color: '#000000' }} className="size-4.5 text-black" />
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-semibold text-[#5c5954]">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="size-4 text-[#2f6b45]" />
               Zero setup required
             </span>
-            <span className="flex items-center gap-2">
-              <Lock style={{ color: '#000000' }} className="size-4.5 text-black" />
-              Role-based access control
+            <span className="flex items-center gap-1.5">
+              <Lock className="size-4 text-[#8c6d53]" />
+              Private ticket conversations
             </span>
-            <span className="flex items-center gap-2">
-              <Layers style={{ color: '#000000' }} className="size-4.5 text-black" />
-              Gemini AI Triage Engine
+            <span className="flex items-center gap-1.5">
+              <Layers className="size-4 text-[#8c6d53]" />
+              Automated AI Triage
             </span>
-          </motion.div>
+          </div>
         </div>
 
-        {/* ================= 2. "HOW IT WORKS" PIPELINE (3-Step Pipeline) ================= */}
-        <div className="mb-24">
-          <div className="text-center mb-12">
-            <span
-              style={{ backgroundColor: '#ffffff', color: '#000000' }}
-              className="text-xs font-bold font-mono tracking-widest uppercase bg-white text-black border border-white/20 px-3 py-1 rounded-full shadow-sm"
-            >
+        {/* 2. HOW IT WORKS PIPELINE */}
+        <div className="mb-16">
+          <div className="text-center mb-10">
+            <span className="text-[11px] font-bold font-mono tracking-widest uppercase bg-[#ebe9e4] text-[#5c5954] border border-[#e2dfd9] px-3 py-1 rounded-full">
               Automated Lifecycle
             </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white font-display mt-3">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#262523] mt-3">
               How It Works
             </h2>
-            <p className="text-slate-300 text-sm md:text-base max-w-xl mx-auto mt-2">
-              From submission to resolution in three streamlined, automated steps.
+            <p className="text-[#5c5954] text-sm max-w-xl mx-auto mt-1.5">
+              From submission to resolution in three clear, automated steps.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Step 1 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="rounded-3xl bg-[#ffffff] text-[#123333] border border-white p-7 shadow-xl relative overflow-hidden flex flex-col justify-between"
-            >
-              <div className="size-12 rounded-2xl bg-[#ffffff] border border-slate-200 shadow-sm flex items-center justify-center text-[#123333] font-display text-xl font-bold mb-5">
+            <div className="rounded-2xl bg-white border border-[#e2dfd9] p-6 flex flex-col justify-between calm-card-hover">
+              <div className="size-10 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] flex items-center justify-center text-[#8c6d53] text-base font-bold mb-4">
                 1
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#123333] font-display mb-2">
-                  Smart Request Submission
+                <h3 className="text-base font-bold text-[#262523] mb-1.5">
+                  Simple Request Submission
                 </h3>
-                <p className="text-[#123333]/85 text-sm leading-relaxed">
-                  End users log incidents via the simple self-service portal with zero training needed.
+                <p className="text-[#5c5954] text-xs leading-relaxed">
+                  Describe your issue using text or voice input, or attach screenshots directly from your support portal.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-2 text-xs text-[#123333] font-semibold">
-                <FileText className="size-4 text-[#123333]" />
-                <span className="text-[#123333]">Zero-friction intake</span>
+              <div className="mt-5 pt-3.5 border-t border-[#ebe9e4] flex items-center gap-2 text-xs text-[#6e533c] font-semibold">
+                <FileText className="size-3.5 text-[#8c6d53]" />
+                <span>Fast, distraction-free intake</span>
               </div>
-            </motion.div>
+            </div>
 
             {/* Step 2 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="rounded-3xl bg-[#ffffff] text-[#123333] border border-slate-200 p-7 shadow-xl relative overflow-hidden flex flex-col justify-between ring-1 ring-[#123333]/10"
-            >
-              <div
-                style={{ borderColor: '#ffffff' }}
-                className="size-12 rounded-2xl bg-[#ffffff] border border-white text-[#123333] flex items-center justify-center font-display text-xl font-extrabold mb-5 shadow-sm"
-              >
+            <div className="rounded-2xl bg-white border border-[#e2dfd9] p-6 flex flex-col justify-between calm-card-hover">
+              <div className="size-10 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] flex items-center justify-center text-[#8c6d53] text-base font-bold mb-4">
                 2
               </div>
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-[#123333] text-[11px] font-bold uppercase mb-2 border border-slate-200">
-                  <Sparkles className="size-3 text-[#123333]" /> AI Powered
-                </div>
-                <h3 className="text-xl font-bold text-[#123333] font-display mb-2">
+                <h3 className="text-base font-bold text-[#262523] mb-1.5">
                   Automated AI Triage
                 </h3>
-                <p className="text-[#123333]/85 text-sm leading-relaxed">
-                  The AI engine categorizes requests, assigns priority levels (<span className="text-emerald-600 font-semibold">Low</span>, <span className="text-[#ffb050] font-semibold">Medium</span>, <span className="text-rose-600 font-semibold">Urgent</span>), and directs tickets to dedicated queues.
+                <p className="text-[#5c5954] text-xs leading-relaxed">
+                  Your request is automatically categorized and routed to the right specialist team without manual sorting delays.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-2 text-xs text-[#123333] font-semibold">
-                <Bot className="size-4 text-[#123333]" />
-                <span className="text-[#123333]">Instant classification</span>
+              <div className="mt-5 pt-3.5 border-t border-[#ebe9e4] flex items-center gap-2 text-xs text-[#6e533c] font-semibold">
+                <Bot className="size-3.5 text-[#8c6d53]" />
+                <span>Instant smart routing</span>
               </div>
-            </motion.div>
+            </div>
 
             {/* Step 3 */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-              className="rounded-3xl bg-[#ffffff] text-[#123333] border border-white p-7 shadow-xl relative overflow-hidden flex flex-col justify-between"
-            >
-              <div className="size-12 rounded-2xl bg-[#ffffff] border border-slate-200 shadow-sm flex items-center justify-center text-[#123333] font-display text-xl font-bold mb-5">
+            <div className="rounded-2xl bg-white border border-[#e2dfd9] p-6 flex flex-col justify-between calm-card-hover">
+              <div className="size-10 rounded-xl bg-[#e6f4ea] border border-[#c6e6d0] flex items-center justify-center text-[#2f6b45] text-base font-bold mb-4">
                 3
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#123333] font-display mb-2">
-                  Rapid Resolution & Chat
+                <h3 className="text-base font-bold text-[#262523] mb-1.5">
+                  Real-Time Resolution & Chat
                 </h3>
-                <p className="text-[#123333]/85 text-sm leading-relaxed">
-                  Technicians take tickets, use quick replies, and resolve issues via real-time integrated chat.
+                <p className="text-[#5c5954] text-xs leading-relaxed">
+                  Communicate directly on your ticket thread and receive live updates until your issue is resolved.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-2 text-xs text-[#123333] font-semibold">
-                <MessageSquare className="size-4 text-[#123333]" />
-                <span className="text-[#123333]">Live technician collaboration</span>
+              <div className="mt-5 pt-3.5 border-t border-[#ebe9e4] flex items-center gap-2 text-xs text-[#2f6b45] font-semibold">
+                <MessageSquare className="size-3.5 text-[#2f6b45]" />
+                <span>Verified resolution tracking</span>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
 
-        {/* ================= 3. CORE ROLE FEATURE BREAKDOWN (3-Card Grid) ================= */}
-        <div className="mb-24">
-          <div className="text-center mb-12">
-            <span
-              style={{ backgroundColor: '#ffffff', color: '#000000' }}
-              className="text-xs font-bold font-mono tracking-widest uppercase bg-white text-black border border-white/20 px-3 py-1 rounded-full shadow-sm"
-            >
-              Unified Ecosystem
+        {/* 3. CUSTOMER PORTAL CAPABILITIES */}
+        <div className="mb-16">
+          <div className="text-center mb-10">
+            <span className="text-[11px] font-bold font-mono tracking-widest uppercase bg-[#ebe9e4] text-[#5c5954] border border-[#e2dfd9] px-3 py-1 rounded-full">
+              Self-Service Experience
             </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white font-display mt-3">
-              Core Role Feature Breakdown
+            <h2 className="text-2xl md:text-3xl font-bold text-[#262523] mt-3">
+              Everything You Need in One Support Portal
             </h2>
-            <p className="text-slate-300 text-sm md:text-base max-w-xl mx-auto mt-2">
-              Three tailored, purpose-built interfaces connected into a single operational brain.
+            <p className="text-[#5c5954] text-sm max-w-xl mx-auto mt-1.5">
+              Designed for clarity and speed so you can resolve technical issues without clutter.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            {/* Card 1: End-User Self-Service Storefront */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="rounded-3xl bg-[#0c2424] border border-white/10 p-8 shadow-xl flex flex-col justify-between group hover:border-[#00d492]/40 transition-all"
-            >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="rounded-2xl bg-white border border-[#e2dfd9] p-6 flex flex-col justify-between calm-card-hover">
               <div>
-                <div
-                  style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#000000' }}
-                  className="size-14 rounded-2xl bg-white border border-black text-black flex items-center justify-center mb-6 shadow-sm"
-                >
-                  <LifeBuoy className="size-7 text-black" />
+                <div className="size-11 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] text-[#8c6d53] flex items-center justify-center mb-5">
+                  <LifeBuoy className="size-5" />
                 </div>
-                <h3 className="text-2xl font-bold text-white font-display mb-3">
-                  End-User Self-Service Storefront
+                <h3 className="text-lg font-bold text-[#262523] mb-2">
+                  Self-Service Ticket Portal
                 </h3>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                  Frictionless request logging and live status visibility for organization members.
+                <p className="text-[#5c5954] text-xs leading-relaxed mb-5">
+                  Log hardware, software, access, or billing requests and monitor live progress in one clean view.
                 </p>
 
-                <ul className="space-y-3.5 text-sm text-slate-200">
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Instant ticket logging button (<strong className="text-white font-mono text-xs">+ Submit a new request</strong>)
-                    </span>
+                <ul className="space-y-2.5 text-xs text-[#262523]">
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>One-click category shortcuts for common issues</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Real-time ticket history with live status badges
-                    </span>
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Voice-to-text dictation and file attachments</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Transparent issue tracking without support blind spots
-                    </span>
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Live status updates from Open to Resolved</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-white/10">
+              <div className="mt-6 pt-4 border-t border-[#ebe9e4]">
                 <button
                   onClick={onOpenNewTicket}
-                  style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#000000' }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-black text-black text-xs font-bold transition-all hover:bg-slate-100 cursor-pointer shadow-sm"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white text-xs font-semibold transition-all cursor-pointer calm-btn"
                 >
-                  <PlusCircle className="size-4 text-black" />
-                  <span className="text-black">Submit Sample Request</span>
+                  <PlusCircle className="size-4" />
+                  <span>Submit a Request</span>
                 </button>
               </div>
-            </motion.div>
+            </div>
 
-            {/* Card 2: Technician Workspace */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="rounded-3xl bg-[#0c2424] border border-white/10 p-8 shadow-xl flex flex-col justify-between group hover:border-[#00d492]/40 transition-all"
-            >
-              <div style={{ color: '#000000' }}>
-                <div
-                  style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#000000' }}
-                  className="size-14 rounded-2xl bg-white border border-black text-black flex items-center justify-center mb-6 shadow-sm"
-                >
-                  <Zap className="size-7 text-black" />
-                </div>
-                <h3 className="text-2xl font-bold text-white font-display mb-3">
-                  Technician Workspace
-                </h3>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                  Speed-optimized queue execution with integrated AI resolution assistants.
-                </p>
-
-                <ul className="space-y-3.5 text-sm text-slate-200">
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Filterable dynamic queues: <strong className="text-white font-mono text-xs">New</strong>, <strong className="text-white font-mono text-xs">Working</strong>, <strong className="text-white font-mono text-xs">Escalated</strong> with real-time counters
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Rapid action buttons: <strong className="text-white font-mono text-xs">Take</strong>, <strong className="text-white font-mono text-xs">Escalate</strong>, and <strong className="text-white font-mono text-xs">Resolve</strong>
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Integrated direct ticket messaging with quick response templates (<strong className="text-white font-mono text-xs">Acknowledge</strong>, <strong className="text-white font-mono text-xs">Need Info</strong>)
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-white/10">
-                <button
-                  onClick={() => currentUser ? setActivePage('dashboard') : onOpenAuth()}
-                  style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#000000' }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-black text-black text-xs font-bold transition-all hover:bg-slate-100 cursor-pointer shadow-sm"
-                >
-                  <SlidersHorizontal className="size-4 text-black" />
-                  <span className="text-black">Open Tech Workspace</span>
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Card 3: Admin Control Center */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="rounded-3xl bg-[#0c2424] border border-white/10 p-8 shadow-xl flex flex-col justify-between group hover:border-[#00d492]/40 transition-all"
-            >
+            {/* Card 2 */}
+            <div className="rounded-2xl bg-white border border-[#e2dfd9] p-6 flex flex-col justify-between calm-card-hover">
               <div>
-                <div
-                  style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#000000' }}
-                  className="size-14 rounded-2xl bg-white border border-black text-black flex items-center justify-center mb-6 shadow-sm"
-                >
-                  <ShieldCheck className="size-7 text-black" />
+                <div className="size-11 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] text-[#8c6d53] flex items-center justify-center mb-5">
+                  <Bot className="size-5" />
                 </div>
-                <h3 className="text-2xl font-bold text-white font-display mb-3">
-                  Admin Control Center
+                <h3 className="text-lg font-bold text-[#262523] mb-2">
+                  24/7 AI Helpdesk Assistant
                 </h3>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                  End-to-end operational governance, audit logs, and team workload analytics.
+                <p className="text-[#5c5954] text-xs leading-relaxed mb-5">
+                  Troubleshoot Wi-Fi, VPN, MFA, and software questions immediately with guided interactive steps.
                 </p>
 
-                <ul className="space-y-3.5 text-sm text-slate-200">
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      High-level metric cards: <strong className="text-white font-mono text-xs">Total requests ({totalTickets})</strong>, <strong className="text-white font-mono text-xs">Open workload ({openTickets})</strong>, and <strong className="text-white font-mono text-xs">Urgent ({urgentTickets})</strong>
-                    </span>
+                <ul className="space-y-2.5 text-xs text-[#262523]">
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Instant answers from verified IT policies</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Operational workload tracking and incident oversight
-                    </span>
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Step-by-step self-service troubleshooting</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <div
-                      style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                      className="size-5 rounded-md bg-white border border-black text-black grid place-items-center shrink-0 mt-0.5 shadow-sm"
-                    >
-                      <Check className="size-3.5 text-black" />
-                    </div>
-                    <span>
-                      Role-switching selector to audit user, technician, and admin views seamlessly
-                    </span>
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Seamless escalation to a support ticket if needed</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-white/10">
+              <div className="mt-6 pt-4 border-t border-[#ebe9e4]">
                 <button
-                  onClick={() => currentUser ? setActivePage('dashboard') : onOpenAuth()}
-                  style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#000000' }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-black text-black text-xs font-bold transition-all hover:bg-slate-100 cursor-pointer shadow-sm"
+                  onClick={() => (currentUser ? setActivePage('dashboard') : onOpenAuth())}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#f4f4f2] hover:bg-[#f5efe8] border border-[#e2dfd9] text-[#6e533c] text-xs font-semibold transition-all cursor-pointer calm-btn"
                 >
-                  <BarChart3 className="size-4 text-black" />
-                  <span className="text-black">Access Admin Control</span>
+                  <HelpCircle className="size-4 text-[#8c6d53]" />
+                  <span>Ask Helpdesk Assistant</span>
                 </button>
               </div>
-            </motion.div>
+            </div>
 
+            {/* Card 3 */}
+            <div className="rounded-2xl bg-white border border-[#e2dfd9] p-6 flex flex-col justify-between calm-card-hover">
+              <div>
+                <div className="size-11 rounded-xl bg-[#e6f4ea] border border-[#c6e6d0] text-[#2f6b45] flex items-center justify-center mb-5">
+                  <MessageSquare className="size-5" />
+                </div>
+                <h3 className="text-lg font-bold text-[#262523] mb-2">
+                  Direct Support Messaging
+                </h3>
+                <p className="text-[#5c5954] text-xs leading-relaxed mb-5">
+                  Keep all replies, diagnostic logs, and resolution notes organized inside each ticket conversation.
+                </p>
+
+                <ul className="space-y-2.5 text-xs text-[#262523]">
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Real-time chat thread for every support ticket</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Share screenshots and diagnostic documents</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Check className="size-4 text-[#2f6b45] shrink-0 mt-0.5" />
+                    <span>Clear SLA and resolution notifications</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-[#ebe9e4]">
+                <button
+                  onClick={() => (currentUser ? setActivePage('dashboard') : onOpenAuth())}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#f4f4f2] hover:bg-[#f5efe8] border border-[#e2dfd9] text-[#6e533c] text-xs font-semibold transition-all cursor-pointer calm-btn"
+                >
+                  <ArrowRight className="size-4 text-[#8c6d53]" />
+                  <span>Sign In to View Tickets</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ================= 4. OPERATIONAL IMPACT SUMMARY BAR ================= */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          style={{ color: '#ffffff', borderColor: '#7e7e7e', backgroundColor: '#0c2424' }}
-          className="mb-24 rounded-3xl bg-[#0c2424] border border-[#7e7e7e] p-8 md:p-10 shadow-2xl relative overflow-hidden text-white"
-        >
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#00d492]/10 blur-[100px] pointer-events-none rounded-full" />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10 divide-y md:divide-y-0 md:divide-x divide-white/10">
-            {/* Metric 1 */}
-            <div className="flex items-start gap-4 pt-4 md:pt-0 md:px-4 first:pl-0">
-              <div
-                style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                className="size-12 rounded-2xl bg-white border border-black text-black grid place-items-center shrink-0 shadow-sm"
-              >
-                <Bot className="size-6 text-black" />
+        {/* 4. OPERATIONAL IMPACT SUMMARY BAR */}
+        <div className="mb-16 rounded-2xl bg-white border border-[#e2dfd9] p-6 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-[#ebe9e4]">
+            <div className="flex items-start gap-3.5 pt-4 md:pt-0 md:px-4 first:pl-0">
+              <div className="size-10 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] text-[#8c6d53] grid place-items-center shrink-0">
+                <Bot className="size-5" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-white font-display">Zero Manual Sorting</h4>
-                <p className="text-slate-300 text-sm mt-1 leading-relaxed">
-                  Instant AI-driven routing on intake.
+                <h4 className="text-sm font-bold text-[#262523]">Automated Triage</h4>
+                <p className="text-[#5c5954] text-xs mt-0.5 leading-relaxed">
+                  Instant AI-driven categorization on every submitted ticket.
                 </p>
               </div>
             </div>
 
-            {/* Metric 2 */}
-            <div className="flex items-start gap-4 pt-6 md:pt-0 md:px-6">
-              <div
-                style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                className="size-12 rounded-2xl bg-white border border-black text-black grid place-items-center shrink-0 shadow-sm"
-              >
-                <TrendingDown className="size-6 text-black" />
+            <div className="flex items-start gap-3.5 pt-4 md:pt-0 md:px-6">
+              <div className="size-10 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] text-[#8c6d53] grid place-items-center shrink-0">
+                <TrendingDown className="size-5" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-white font-display">Reduced MTTR</h4>
-                <p className="text-slate-300 text-sm mt-1 leading-relaxed">
-                  Direct ticket assignment and context-rich queues.
+                <h4 className="text-sm font-bold text-[#262523]">Faster Resolution</h4>
+                <p className="text-[#5c5954] text-xs mt-0.5 leading-relaxed">
+                  Guided self-service and direct specialist routing reduce wait times.
                 </p>
               </div>
             </div>
 
-            {/* Metric 3 */}
-            <div className="flex items-start gap-4 pt-6 md:pt-0 md:px-6 last:pr-0">
-              <div
-                style={{ backgroundColor: '#ffffff', borderColor: '#000000', color: '#000000' }}
-                className="size-12 rounded-2xl bg-white border border-black text-black grid place-items-center shrink-0 shadow-sm"
-              >
-                <Eye className="size-6 text-black" />
+            <div className="flex items-start gap-3.5 pt-4 md:pt-0 md:px-6 last:pr-0">
+              <div className="size-10 rounded-xl bg-[#e6f4ea] border border-[#c6e6d0] text-[#2f6b45] grid place-items-center shrink-0">
+                <Eye className="size-5" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-white font-display">Full Operational Visibility</h4>
-                <p className="text-slate-300 text-sm mt-1 leading-relaxed">
-                  Unified control center across the entire team.
+                <h4 className="text-sm font-bold text-[#262523]">Clear Status Tracking</h4>
+                <p className="text-[#5c5954] text-xs mt-0.5 leading-relaxed">
+                  Transparent updates from ticket creation through final resolution.
                 </p>
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* ================= 5. BOTTOM CALL-TO-ACTION ================= */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="rounded-3xl bg-gradient-to-br from-[#0c2424] via-[#123333] to-[#0c2424] border border-white/20 p-10 md:p-14 text-center max-w-4xl mx-auto shadow-2xl relative overflow-hidden"
-        >
-          <div className="relative z-10 space-y-6">
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white font-display tracking-tight">
-              Ready to Streamline Your IT Operations?
+        {/* 5. BOTTOM CALL-TO-ACTION */}
+        <div className="rounded-2xl bg-[#f5efe8] border border-[#d6c2b0] p-8 md:p-12 text-center max-w-4xl mx-auto">
+          <div className="space-y-4">
+            <h2 className="text-2xl md:text-4xl font-bold text-[#262523] tracking-tight">
+              Need Assistance With an IT Issue?
             </h2>
-            <p className="text-slate-200 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-              Access the live environment and switch between user, technician, and administrative roles.
+            <p className="text-[#5c5954] text-sm md:text-base max-w-xl mx-auto leading-relaxed">
+              Sign in to your support portal to track your requests or submit a new ticket in seconds.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <button
                 id="cta-launch-desk-btn"
-                onClick={() => currentUser ? setActivePage('dashboard') : onOpenAuth()}
-                style={{ backgroundColor: '#ffffff', color: '#123333' }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold transition-all hover:bg-slate-100 shadow-md cursor-pointer"
+                onClick={() => (currentUser ? setActivePage('dashboard') : onOpenAuth())}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] px-7 py-3.5 text-sm font-semibold text-white transition-all cursor-pointer calm-btn"
               >
-                <span style={{ color: '#000000' }}>{currentUser ? 'Open Dashboard' : 'Launch Desk'}</span>
-                <ArrowRight className="size-4 text-[#123333]" />
+                <span>{currentUser ? 'Open Support Portal' : 'Sign In to Portal'}</span>
+                <ArrowRight className="size-4" />
               </button>
               <button
                 id="cta-submit-request-btn"
                 onClick={onOpenNewTicket}
-                style={{ backgroundColor: '#fbfafa', color: '#123333' }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-8 py-4 text-base font-bold transition-all hover:bg-white shadow-md cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6c2b0] bg-white hover:bg-[#f4f4f2] px-7 py-3.5 text-sm font-semibold text-[#6e533c] transition-all cursor-pointer calm-btn"
               >
-                <span style={{ color: '#000000' }} className="text-black font-extrabold">Submit a Request</span>
+                <span>Submit a Request</span>
               </button>
             </div>
           </div>
-        </motion.div>
-
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-[#0c2424] py-10 text-center relative z-10 text-slate-400">
-        <p className="text-sm font-medium">
-          © {new Date().getFullYear()} TechnoResolve Desk. Powered by Gemini AI Triage Engine.
+      <footer className="border-t border-[#e2dfd9] bg-white py-8 text-center text-[#8c8881]">
+        <p className="text-xs font-medium">
+          © {new Date().getFullYear()} TechnoResolve Desk. Customer Support & Helpdesk Portal.
         </p>
       </footer>
     </div>
   );
 };
-

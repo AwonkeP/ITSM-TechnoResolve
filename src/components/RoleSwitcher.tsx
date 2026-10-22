@@ -1,15 +1,20 @@
 import React from 'react';
 import { UserRole } from '../types';
 import { useApp } from '../context/AppContext';
-import { ShieldCheck, Wrench, User, Lock } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ShieldCheck, Wrench, User } from 'lucide-react';
 
 export const RoleSwitcher: React.FC = () => {
   const { viewRole, setViewRole, currentUser } = useApp();
 
   const userRole = currentUser?.role || 'user';
 
-  const roles: {
+  // Strict role isolation: ONLY Admins see or can use the portal switcher.
+  // Technicians and Customers see only their own portal and never see portal switcher buttons.
+  if (!currentUser || userRole !== 'admin') {
+    return null;
+  }
+
+  const allRoles: {
     id: UserRole;
     label: string;
     icon: React.FC<{ className?: string }>;
@@ -19,61 +24,34 @@ export const RoleSwitcher: React.FC = () => {
     { id: 'user', label: 'Customer', icon: User },
   ];
 
-  const isRoleLocked = (targetRole: UserRole): boolean => {
-    if (!currentUser) return false;
-    if (userRole === 'admin') return false; // Admin can view any workspace
-    if (userRole === 'technician') {
-      return targetRole === 'admin'; // Technician cannot access Admin
-    }
-    // Customer/User: cannot access Admin or Technician
-    return targetRole === 'admin' || targetRole === 'technician';
-  };
-
-  const handleRoleClick = (targetRole: UserRole) => {
-    setViewRole(targetRole);
-  };
+  const visibleRoles = allRoles;
 
   return (
     <div
       id="role-switcher"
-      className="flex items-center gap-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 p-1 text-xs border border-slate-200/80 shadow-xs"
+      className="flex items-center gap-1 rounded-full bg-[#ebe9e4] p-1 text-xs border border-[#e2dfd9]"
     >
-      {roles.map((r) => {
+      {visibleRoles.map((r) => {
         const Icon = r.icon;
         const isActive = viewRole === r.id;
-        const locked = isRoleLocked(r.id);
 
         return (
-          <motion.button
+          <button
             key={r.id}
             id={`role-btn-${r.id}`}
-            whileHover={{ scale: locked ? 1 : 1.03 }}
-            whileTap={{ scale: locked ? 1 : 0.97 }}
-            onClick={() => handleRoleClick(r.id)}
-            title={
-              locked
-                ? `🔒 Locked - Requires ${r.label} privileges`
-                : `Switch to ${r.label} Dashboard`
-            }
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all cursor-pointer border ${
+            onClick={() => setViewRole(r.id)}
+            title={`Switch to ${r.label} Portal`}
+            className={`calm-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs cursor-pointer border whitespace-nowrap shrink-0 ${
               isActive
-                ? 'bg-[#0f3b6c] text-white border-[#0f3b6c] font-bold shadow-xs'
-                : locked
-                ? 'bg-slate-100/80 text-slate-400 border-slate-200/60 hover:bg-slate-200/60 font-medium'
-                : 'bg-white text-[#0f3b6c] border-transparent hover:border-slate-300 hover:bg-slate-50 font-medium'
+                ? 'bg-[#8c6d53] text-white border-[#8c6d53] font-semibold shadow-2xs'
+                : 'bg-white text-stone-700 border-[#e2dfd9] hover:bg-[#f5efe8] hover:text-[#6e533c] hover:border-[#c7b6a6] font-medium'
             }`}
           >
-            {locked ? (
-              <Lock className="size-3 text-slate-400 shrink-0" />
-            ) : (
-              <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-white' : 'text-[#0f3b6c]'}`} />
-            )}
+            <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-white' : 'text-[#8c6d53]'}`} />
             <span className="capitalize">{r.label}</span>
-          </motion.button>
+          </button>
         );
       })}
     </div>
   );
 };
-
-

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
 import {
   Bot,
   Mail,
@@ -12,9 +11,8 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  Loader2
+  Loader2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface LoginPageProps {
   onBackToLanding?: () => void;
@@ -22,7 +20,6 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
   const {
-    users,
     signIn,
     signUp,
     signInWithGoogle,
@@ -30,14 +27,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
   } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'signup' | 'verify'>('signin');
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [company, setCompany] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
@@ -47,7 +44,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
     await signInWithGoogle();
     setIsLoading(false);
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,20 +58,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
           setIsLoading(false);
           return;
         }
-        
-        // Start verification flow
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         setGeneratedOtp(otp);
         setOtpError('');
-        
+
         try {
-          // Dynamically import emailjs only when needed
           const emailjs = (await import('@emailjs/browser')).default;
-          
+
           const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
           const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
           const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-          
+
           if (serviceId && templateId && publicKey) {
             await emailjs.send(
               serviceId,
@@ -99,9 +93,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
             );
             showToast('Verification code sent to your email.', 'info');
           } else {
-            console.log('EmailJS variables missing, simulating email send.');
-            console.log(`[MOCK EMAIL] To: ${email}, Verification Code: ${otp}`);
-            alert(`[DEMO MODE] Verification code is: ${otp}`);
+            showToast(`Verification code: ${otp}`, 'info');
           }
           setMode('verify');
         } catch (err: any) {
@@ -118,105 +110,95 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otpInput === generatedOtp) {
-       setIsLoading(true);
-       try {
-         await signUp({
-           email,
-           password,
-           full_name: fullName,
-           company: company || 'TechnoResolve',
-           role: 'user', // Always default to user, backend promotes first user to admin
-         });
-       } finally {
-         setIsLoading(false);
-       }
+      setIsLoading(true);
+      try {
+        await signUp({
+          email,
+          password,
+          full_name: fullName,
+          company: company || 'TechnoResolve',
+          role: 'user',
+        });
+      } finally {
+        setIsLoading(false);
+      }
     } else {
-       setOtpError('Invalid verification code. Please try again.');
+      setOtpError('Invalid verification code. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-[#00d492]/30">
-      
-      {/* LEFT PANEL - Branding (Hidden on small mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#123333] flex-col justify-between p-12 relative overflow-hidden">
-        {/* Ambient background blur */}
-        <div
-          style={{ width: '30px' }}
-          className="absolute -top-[10%] -left-[10%] w-[55%] h-[55%] rounded-full bg-[#00d492]/10 blur-[130px]"
-        />
-        <div className="absolute top-[35%] -right-[10%] w-[45%] h-[45%] rounded-full bg-[#0f3b6c]/30 blur-[140px]" />
-        
+    <div className="min-h-screen flex w-full bg-[#f4f4f2] text-[#262523] font-sans">
+      {/* LEFT PANEL - Calm Warm Stone & Light Brown */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#ebe9e4] border-r border-[#e2dfd9] flex-col justify-between p-12 relative overflow-hidden">
         <div className="relative z-10 flex items-center gap-3">
-          <div
-            style={{ color: '#000000', borderColor: '#000000', backgroundColor: '#ffffff' }}
-            className="size-10 rounded-xl bg-white border border-black text-black shadow-md grid place-items-center font-bold"
-          >
-            <Bot style={{ width: '40px', height: '40px' }} className="size-10 text-black p-1" />
+          <div className="size-10 rounded-xl bg-[#8c6d53] text-white grid place-items-center font-bold">
+            <Bot className="size-5" />
           </div>
-          <span className="font-display text-xl font-bold tracking-tight text-white">TechnoResolve Desk</span>
+          <span className="text-xl font-bold tracking-tight text-[#262523]">TechnoResolve Desk</span>
         </div>
 
-        <div className="relative z-10 max-w-lg mb-10">
-          <h1 className="text-4xl lg:text-5xl font-extrabold text-white font-display leading-[1.1] mb-6">
-            Intelligent IT Service Management.
+        <div className="relative z-10 max-w-lg mb-10 space-y-4">
+          <span className="inline-block px-3 py-1 rounded-full bg-[#f5efe8] border border-[#d6c2b0] text-xs font-semibold text-[#6e533c]">
+            Support & Service Desk
+          </span>
+          <h1 className="text-4xl lg:text-5xl font-bold text-[#262523] leading-[1.12]">
+            Simple, Calm IT Support Management.
           </h1>
-          <p className="text-lg text-slate-300 font-medium leading-relaxed">
-            Unify your team's support operations with automated AI triage, real-time ticket execution, and a friction-free storefront.
+          <p className="text-base text-[#5c5954] leading-relaxed">
+            Submit and track support tickets, get guided troubleshooting from our Helpdesk Assistant, and stay connected with your support team.
           </p>
         </div>
 
-        <div className="relative z-10 text-sm font-medium text-slate-400">
-          © {new Date().getFullYear()} TechnoResolve Enterprise
+        <div className="relative z-10 text-xs font-medium text-[#8c8881]">
+          © {new Date().getFullYear()} TechnoResolve Desk
         </div>
       </div>
 
       {/* RIGHT PANEL - Auth Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 md:px-20 py-12 relative overflow-y-auto">
-        
-        {/* Mobile Header (Visible only on small screens) */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 md:px-20 py-12 relative overflow-y-auto bg-white">
+        {/* Mobile Header */}
         <div className="lg:hidden flex items-center gap-3 mb-10">
-          <div className="size-10 rounded-xl bg-[#123333] text-[#00d492] shadow-sm grid place-items-center font-bold">
+          <div className="size-9 rounded-xl bg-[#8c6d53] text-white grid place-items-center font-bold">
             <Bot className="size-5" />
           </div>
-          <span className="font-display text-xl font-bold tracking-tight text-[#123333]">TechnoResolve</span>
+          <span className="text-lg font-bold tracking-tight text-[#262523]">TechnoResolve Desk</span>
         </div>
 
         {/* Back Button */}
         {onBackToLanding && (
-          <button 
+          <button
             onClick={onBackToLanding}
-            className="absolute top-8 left-6 lg:left-12 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+            className="absolute top-8 left-6 lg:left-12 flex items-center gap-2 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-colors cursor-pointer"
           >
             <ArrowLeft className="size-4" />
-            <span>Back to website</span>
+            <span>Back to home</span>
           </button>
-        
+        )}
 
-        
-        )}<div className="max-w-md w-full mx-auto">
-          {/* Header */}
+        <div className="max-w-md w-full mx-auto calm-fade-slide">
           <div className="mb-8">
-            <h2 className="text-3xl font-extrabold text-slate-900 font-display mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#262523] mb-2">
               {mode === 'signin' ? 'Welcome back' : 'Create an account'}
             </h2>
-            <p className="text-slate-500 font-medium">
-              {mode === 'signin' 
-                ? 'Sign in to access your workspace and tickets.'
+            <p className="text-xs sm:text-sm text-[#5c5954]">
+              {mode === 'signin'
+                ? 'Sign in to access your support portal and tickets.'
                 : 'Create an account to submit and track IT service requests.'}
             </p>
           </div>
 
-          {/* Form */}
           {mode === 'verify' ? (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="text-center space-y-2 mb-6">
-                 <h3 className="text-lg font-bold text-slate-900">Verify Your Email</h3>
-                 <p className="text-sm text-slate-500">We sent a 6-digit code to <span className="font-semibold text-slate-700">{email}</span>.</p>
+                <h3 className="text-base font-bold text-[#262523]">Verify Your Email</h3>
+                <p className="text-xs text-[#5c5954]">
+                  We sent a 6-digit code to <span className="font-semibold text-[#262523]">{email}</span>.
+                </p>
               </div>
-              
+
               {otpError && (
-                <div className="bg-red-50 text-red-600 p-3 text-sm rounded-xl border border-red-100 text-center flex items-center justify-center gap-2">
+                <div className="bg-[#f5efe8] text-[#6e533c] p-3 text-xs rounded-xl border border-[#d6c2b0] text-center flex items-center justify-center gap-2">
                   <AlertCircle className="size-4" />
                   {otpError}
                 </div>
@@ -231,18 +213,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
                     onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
                     placeholder="000000"
                     required
-                    className="w-48 mx-auto text-center tracking-[0.5em] text-2xl font-bold rounded-xl border border-slate-200 bg-white py-3 text-slate-900 outline-none focus:ring-2 focus:ring-[#00d492] focus:border-transparent shadow-sm"
+                    className="w-48 mx-auto text-center tracking-[0.5em] text-2xl font-bold rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] py-3 text-[#262523] outline-none focus:border-[#8c6d53]"
                   />
                 </label>
               </div>
-              
+
               <button
                 type="submit"
                 disabled={isLoading || otpInput.length !== 6}
-                className="w-full py-3.5 px-4 bg-[#123333] hover:bg-[#1a4a4a] text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-[#8c6d53] hover:bg-[#765a43] text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer calm-btn"
               >
                 {isLoading ? (
-                  <Loader2 className="size-5 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <>
                     <span>Verify and Create Account</span>
@@ -250,7 +232,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
                   </>
                 )}
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => {
@@ -258,127 +240,118 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
                   setOtpInput('');
                   setOtpError('');
                 }}
-                className="w-full mt-4 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                className="w-full mt-4 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-colors cursor-pointer"
               >
                 Back to sign up
               </button>
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              
-              <AnimatePresence mode="popLayout">
-                {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0, y: -10 }}
-                  animate={{ opacity: 1, height: 'auto', y: 0 }}
-                  exit={{ opacity: 0, height: 0, y: -10 }}
-                  className="space-y-4 overflow-hidden"
-                >
+              {mode === 'signup' && (
+                <div className="space-y-4 calm-fade-slide">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700">Full Name</label>
+                    <label className="text-xs font-semibold text-[#262523]">Full Name</label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-slate-400" />
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#8c8881]" />
                       <input
                         type="text"
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Jane Doe"
-                        className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00d492] focus:border-transparent transition-all shadow-sm"
+                        className="w-full bg-[#f4f4f2] focus:bg-white border border-[#e2dfd9] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[#262523] placeholder:text-[#8c8881] focus:outline-none focus:border-[#8c6d53] transition-all"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700">Company / Department <span className="text-slate-400 font-normal">(Optional)</span></label>
+                    <label className="text-xs font-semibold text-[#262523]">
+                      Company / Department <span className="text-[#8c8881] font-normal">(Optional)</span>
+                    </label>
                     <div className="relative">
-                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-slate-400" />
+                      <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#8c8881]" />
                       <input
                         type="text"
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         placeholder="Engineering"
-                        className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00d492] focus:border-transparent transition-all shadow-sm"
+                        className="w-full bg-[#f4f4f2] focus:bg-white border border-[#e2dfd9] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[#262523] placeholder:text-[#8c8881] focus:outline-none focus:border-[#8c6d53] transition-all"
                       />
                     </div>
                   </div>
-                </motion.div>
-              
-            
-              )}</AnimatePresence>
+                </div>
+              )}
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-slate-700">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-slate-400" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00d492] focus:border-transparent transition-all shadow-sm"
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#262523]">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#8c8881]" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="w-full bg-[#f4f4f2] focus:bg-white border border-[#e2dfd9] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[#262523] placeholder:text-[#8c8881] focus:outline-none focus:border-[#8c6d53] transition-all"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5 pb-2">
-              <label className="text-sm font-bold text-slate-700">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-slate-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-10 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00d492] focus:border-transparent transition-all shadow-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                </button>
+              <div className="space-y-1.5 pb-2">
+                <label className="text-xs font-semibold text-[#262523]">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#8c8881]" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#f4f4f2] focus:bg-white border border-[#e2dfd9] rounded-xl py-2.5 pl-10 pr-10 text-sm text-[#262523] placeholder:text-[#8c8881] focus:outline-none focus:border-[#8c6d53] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8c8881] hover:text-[#262523] transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-[#123333] hover:bg-[#1a4a4a] text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <Loader2 className="size-5 animate-spin" />
-              ) : (
-                <>
-                  <span>{mode === 'signin' ? 'Sign In' : 'Create Account'}</span>
-                  <ArrowRight className="size-4" />
-                </>
-              
-            
-              )}</button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-[#8c6d53] hover:bg-[#765a43] text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer calm-btn"
+              >
+                {isLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>{mode === 'signin' ? 'Sign In' : 'Create Account'}</span>
+                    <ArrowRight className="size-4" />
+                  </>
+                )}
+              </button>
+            </form>
           )}
 
           {mode !== 'verify' && (
             <>
-              <div className="my-8 flex items-center gap-4">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">or continue with</span>
-                <div className="flex-1 h-px bg-slate-200" />
+              <div className="my-6 flex items-center gap-4">
+                <div className="flex-1 h-px bg-[#e2dfd9]" />
+                <span className="text-[11px] font-semibold text-[#8c8881] uppercase tracking-wider">or continue with</span>
+                <div className="flex-1 h-px bg-[#e2dfd9]" />
               </div>
 
-              {/* Google Auth Button */}
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-3 disabled:opacity-70 disabled:pointer-events-none"
+                className="w-full py-3 px-4 bg-white hover:bg-[#f4f4f2] border border-[#e2dfd9] text-[#262523] rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2.5 disabled:opacity-70 disabled:pointer-events-none cursor-pointer"
               >
-                <svg className="size-5" viewBox="0 0 24 24">
+                <svg className="size-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -396,25 +369,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
                     fill="#EA4335"
                   />
                 </svg>
-                Google
+                <span>Google</span>
               </button>
 
-              {/* Toggle Mode */}
-              
-                <p className="mt-8 text-center text-sm font-medium text-slate-600">
-                  {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
-                  <button
-                    type="button"
-                    onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                    className="font-bold text-[#123333] hover:text-[#00d492] hover:underline transition-all"
-                  >
-                    {mode === 'signin' ? 'Sign up' : 'Sign in'}
-                  </button>
-                </p>
+              <p className="mt-6 text-center text-xs text-[#5c5954]">
+                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                  className="font-semibold text-[#8c6d53] hover:underline transition-all cursor-pointer"
+                >
+                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
             </>
           )}
-          
-
         </div>
       </div>
     </div>

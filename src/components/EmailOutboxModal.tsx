@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { EmailOutboxItem } from '../types';
 import {
   Mail,
   X,
-  Send,
-  Clock,
   CheckCircle2,
   Copy,
-  ExternalLink,
   Search,
   KeyRound,
-  ShieldCheck,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface EmailOutboxModalProps {
   isOpen: boolean;
@@ -23,7 +17,6 @@ interface EmailOutboxModalProps {
 export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onClose }) => {
   const { outbox, showToast, verifyEmail } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEmail, setSelectedEmail] = useState<EmailOutboxItem | null>(null);
 
   if (!isOpen) return null;
 
@@ -48,28 +41,23 @@ export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onCl
   return (
     <div
       id="email-outbox-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
     >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl border border-slate-700/80 bg-[#09172e] shadow-2xl overflow-hidden text-slate-100 font-sans"
-      >
+      <div className="calm-fade-slide w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl border border-[#e2dfd9] bg-white shadow-xl overflow-hidden text-[#262523] font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-[#060f1e]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e2dfd9] bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 grid place-items-center">
+            <div className="size-8 rounded-xl bg-[#f5efe8] text-[#8c6d53] border border-[#d6c2b0] grid place-items-center">
               <Mail className="size-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm text-white">System Email Outbox</h3>
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                <h3 className="font-bold text-sm text-[#262523]">System Email Outbox</h3>
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#f5efe8] text-[#6e533c] border border-[#d6c2b0] tabular-nums">
                   {outbox.length} Dispatched
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[#5c5954]">
                 Live delivery logs for email confirmations, ticket updates & approvals
               </p>
             </div>
@@ -77,30 +65,30 @@ export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onCl
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+            className="p-2 rounded-lg text-[#8c8881] hover:text-[#262523] hover:bg-[#f4f4f2] transition-all cursor-pointer"
           >
             <X className="size-4" />
           </button>
         </div>
 
         {/* Search Bar */}
-        <div className="px-5 py-2.5 bg-[#071326] border-b border-slate-800/80">
+        <div className="px-5 py-2.5 bg-[#f4f4f2] border-b border-[#e2dfd9]">
           <div className="relative">
-            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8c8881]" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by recipient or subject..."
-              className="w-full rounded-xl border border-slate-800 bg-[#060f1e] pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 transition-all"
+              className="w-full rounded-xl border border-[#e2dfd9] bg-white pl-9 pr-3 py-2 text-xs text-[#262523] placeholder:text-[#8c8881] outline-none focus:border-[#8c6d53] transition-all"
             />
           </div>
         </div>
 
-        {/* Content Body: Two columns if selected, or single list */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 p-3 space-y-2">
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2.5 bg-[#f4f4f2]/50">
           {filtered.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-xs">
+            <div className="py-12 text-center text-[#8c8881] text-xs">
               No email records found matching your filter.
             </div>
           ) : (
@@ -109,18 +97,18 @@ export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onCl
               return (
                 <div
                   key={item.id}
-                  className="rounded-xl border border-slate-800/80 bg-[#071428] p-4 space-y-2.5 hover:border-slate-700 transition-all"
+                  className="rounded-xl border border-[#e2dfd9] bg-white p-4 space-y-2.5 transition-all calm-card-hover"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-950 text-emerald-400 border border-emerald-500/30 uppercase">
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] uppercase">
                         {item.status}
                       </span>
-                      <span className="font-mono text-xs font-semibold text-cyan-300">
+                      <span className="font-mono text-xs font-semibold text-[#6e533c]">
                         To: {item.to}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] text-[#8c8881] tabular-nums">
                       {new Date(item.created_at).toLocaleString([], {
                         month: 'short',
                         day: 'numeric',
@@ -130,27 +118,27 @@ export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onCl
                     </span>
                   </div>
 
-                  <h4 className="text-xs font-bold text-white">{item.subject}</h4>
+                  <h4 className="text-xs font-bold text-[#262523]">{item.subject}</h4>
 
                   {item.payload && (
-                    <div className="rounded-lg bg-[#050c18] p-3 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed border border-slate-800/80">
+                    <div className="rounded-lg bg-[#f4f4f2] p-3 text-xs text-[#262523] font-mono whitespace-pre-wrap leading-relaxed border border-[#e2dfd9]">
                       {item.payload}
                     </div>
                   )}
 
                   {code && (
-                    <div className="flex items-center justify-between bg-cyan-950/30 border border-cyan-500/30 rounded-lg p-2 text-xs">
+                    <div className="flex items-center justify-between bg-[#f5efe8] border border-[#d6c2b0] rounded-lg p-2.5 text-xs">
                       <div className="flex items-center gap-2">
-                        <KeyRound className="size-3.5 text-cyan-400" />
-                        <span className="text-slate-300">Verification Code:</span>
-                        <span className="font-mono font-extrabold text-white text-sm tracking-wider">
+                        <KeyRound className="size-3.5 text-[#8c6d53]" />
+                        <span className="text-[#5c5954]">Verification Code:</span>
+                        <span className="font-mono font-extrabold text-[#262523] text-sm tracking-wider tabular-nums">
                           {code}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => copyToClipboard(code)}
-                          className="px-2 py-1 rounded bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700 flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-white border border-[#e2dfd9] text-xs font-semibold text-[#262523] hover:bg-[#f4f4f2] flex items-center gap-1 cursor-pointer"
                         >
                           <Copy className="size-3" /> Copy
                         </button>
@@ -159,7 +147,7 @@ export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onCl
                             await verifyEmail(code);
                             onClose();
                           }}
-                          className="px-2.5 py-1 rounded bg-cyan-400 text-xs font-bold text-slate-950 hover:bg-cyan-300 flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-[#8c6d53] hover:bg-[#765a43] text-xs font-bold text-white flex items-center gap-1 cursor-pointer calm-btn"
                         >
                           <CheckCircle2 className="size-3" /> Apply Code
                         </button>
@@ -173,16 +161,16 @@ export const EmailOutboxModal: React.FC<EmailOutboxModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-800 bg-[#060f1e] flex items-center justify-between text-xs text-slate-400">
+        <div className="px-5 py-3 border-t border-[#e2dfd9] bg-white flex items-center justify-between text-xs text-[#5c5954]">
           <span>Transactional delivery simulator active</span>
           <button
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] text-[#262523] font-semibold cursor-pointer"
           >
             Close
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

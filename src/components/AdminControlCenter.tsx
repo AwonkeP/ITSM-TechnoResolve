@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole, Ticket, UserProfile } from '../types';
+import { UserRole, Ticket } from '../types';
 import { CATEGORIES, getCategoryLabel, formatStatus } from '../data/seedData';
 import {
   ShieldCheck,
@@ -20,16 +20,12 @@ import {
   Layers,
   Settings,
   Key,
-  Database,
   Cpu,
-  Server,
   Bell,
-  Plus,
   UserCheck,
   UserX,
   Menu,
   X,
-  ShieldAlert,
   ArrowUpRight,
   ExternalLink,
 } from 'lucide-react';
@@ -41,27 +37,24 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
 } from 'recharts';
 import { RoleSwitcher } from './RoleSwitcher';
 import { TicketChatModal } from './TicketChatModal';
-import { motion, AnimatePresence } from 'motion/react';
+import { useAnimatedCounter, animateCalmFadeSlide } from '../utils/jsAnimations';
 
 export const AdminControlCenter: React.FC = () => {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  
+  const [confirmPurge, setConfirmPurge] = useState(false);
+
   const {
     currentUser,
     tickets,
     users,
     outbox,
-    notifications,
     unreadNotificationsCount,
-    pendingUsersCount,
     updateUserRole,
     updateUserStatus,
     deleteUser,
@@ -79,6 +72,11 @@ export const AdminControlCenter: React.FC = () => {
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    animateCalmFadeSlide(contentRef.current);
+  }, [activeNav]);
 
   // Filters for ticket table
   const [ticketSearch, setTicketSearch] = useState('');
@@ -97,9 +95,15 @@ export const AdminControlCenter: React.FC = () => {
   const openWorkload = tickets.filter((t) => !['resolved', 'closed'].includes(t.status)).length;
   const urgentTickets = tickets.filter((t) => t.priority === 'urgent' || t.status === 'escalated').length;
   const aiClassifiedCount = tickets.filter((t) => !!t.ai_category).length;
-  const aiConfidencePct = totalTickets > 0 
+  const aiConfidencePct = totalTickets > 0
     ? Math.round((tickets.reduce((acc, t) => acc + (t.ai_confidence || 0.85), 0) / totalTickets) * 100)
     : 0;
+
+  // Smooth JS animated counters
+  const animTotalTickets = useAnimatedCounter(totalTickets);
+  const animOpenWorkload = useAnimatedCounter(openWorkload);
+  const animUrgentTickets = useAnimatedCounter(urgentTickets);
+  const animAiConfidence = useAnimatedCounter(aiConfidencePct);
 
   // Unapproved users list
   const pendingUsers = useMemo(() => {
@@ -149,20 +153,19 @@ export const AdminControlCenter: React.FC = () => {
       };
     });
 
-    // Sort by count descending, ensure top 4 categories are shown
     const sorted = [...list].sort((a, b) => b.total - a.total);
     return sorted.slice(0, 4);
   }, [tickets]);
 
-  // Status distribution data
+  // Calm status distribution data using light brown, stone greys, and light green for resolved
   const statusChartData = useMemo(() => {
     const statusDefs = [
-      { key: 'new', label: 'New', color: '#38bdf8' },
-      { key: 'in_progress', label: 'In Progress', color: '#f59e0b' },
-      { key: 'pending_user', label: 'Pending User', color: '#a855f7' },
-      { key: 'escalated', label: 'Escalated', color: '#ef4444' },
-      { key: 'resolved', label: 'Resolved', color: '#10b981' },
-      { key: 'closed', label: 'Closed', color: '#64748b' },
+      { key: 'new', label: 'New', color: '#8c6d53' },
+      { key: 'in_progress', label: 'In Progress', color: '#a88b73' },
+      { key: 'pending_user', label: 'Pending User', color: '#8c8881' },
+      { key: 'escalated', label: 'Escalated', color: '#5c5954' },
+      { key: 'resolved', label: 'Resolved', color: '#2f6b45' },
+      { key: 'closed', label: 'Closed', color: '#c4bfb6' },
     ];
 
     return statusDefs.map((def) => {
@@ -209,6 +212,11 @@ export const AdminControlCenter: React.FC = () => {
       );
     });
   }, [users, userSearch]);
+
+  // Strict Component-Level Guard: Only Admins can ever render AdminControlCenter
+  if (!currentUser || currentUser.role !== 'admin') {
+    return null;
+  }
 
   // CSV Export
   const handleExportCSV = () => {
@@ -270,46 +278,46 @@ export const AdminControlCenter: React.FC = () => {
   return (
     <div
       id="admin-control-center"
-      className="flex min-h-screen bg-[#edf5fd] text-slate-900 font-sans antialiased overflow-hidden"
+      className="flex min-h-screen bg-[#f4f4f2] text-[#262523] font-sans antialiased overflow-hidden"
     >
       {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
         <div
           onClick={() => setIsMobileSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-xs lg:hidden"
         />
       )}
 
-      {/* Left Operations Sidebar */}
+      {/* Left Operations Sidebar — Clean White & Warm Stone Grey */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col bg-[#081224] text-slate-700 border-r border-slate-200 transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col bg-white text-[#5c5954] border-r border-[#e2dfd9] transition-transform duration-200 lg:translate-x-0 ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#123333] bg-[#123333]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e2dfd9] bg-white">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-[#0f3b6c] border border-[#0f3b6c]/20 shadow-xs">
+            <div className="grid size-9 place-items-center rounded-xl bg-[#f5efe8] text-[#8c6d53] border border-[#d6c2b0]">
               <ShieldCheck className="size-5" />
             </div>
             <div>
-              <p className="font-bold text-sm tracking-tight bg-[#123333] text-[#f5e9e9] border border-[#103933] px-1.5 py-0.5 rounded">TechnoResolve Control</p>
-              <p className="text-[11px] font-mono font-semibold bg-[#123333] text-[#f7ebeb] border border-[#113737] px-1.5 py-0.5 rounded mt-0.5">Administrator</p>
+              <p className="font-bold text-sm tracking-tight text-[#262523]">TechnoResolve</p>
+              <p className="text-[11px] font-mono text-[#6e533c]">Admin Control</p>
             </div>
           </div>
           <button
             onClick={() => setIsMobileSidebarOpen(false)}
-            className="lg:hidden p-1 text-slate-400 hover:text-slate-900"
+            className="lg:hidden p-1 text-[#8c8881] hover:text-[#262523]"
           >
             <X className="size-5" />
           </button>
         </div>
 
         {/* Nav Groups */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 bg-[#123333] border-t border-b border-[#123333]">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 bg-white">
           {navItems.map((group) => (
             <div key={group.group} className="space-y-1">
-              <p className="text-[11px] font-bold tracking-wider uppercase text-slate-400 px-3 mb-2">
+              <p className="text-[10px] font-bold tracking-wider uppercase text-[#8c8881] px-3 mb-2">
                 {group.group}
               </p>
               {group.items.map((item) => {
@@ -324,20 +332,20 @@ export const AdminControlCenter: React.FC = () => {
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-slate-100 text-[#0f3b6c] border border-[#0f3b6c]/20 shadow-xs'
-                        : 'text-slate-300 hover:text-white hover:bg-white/10'
+                        ? 'bg-[#f5efe8] text-[#6e533c] border border-[#d6c2b0]'
+                        : 'text-[#5c5954] hover:text-[#262523] hover:bg-[#f4f4f2] border border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`size-4 shrink-0 ${isActive ? 'text-[#0f3b6c]' : 'text-slate-300'}`} />
+                      <Icon className={`size-4 shrink-0 ${isActive ? 'text-[#8c6d53]' : 'text-[#8c8881]'}`} />
                       <span>{item.label}</span>
                     </div>
                     {item.badge !== undefined && (
                       <span
-                        className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-full tabular-nums ${
                           item.id === 'approvals' && item.badge > 0
-                            ? 'bg-amber-500 text-slate-950 animate-pulse'
-                            : 'bg-slate-100 text-slate-700'
+                            ? 'bg-[#8c6d53] text-white'
+                            : 'bg-[#ebe9e4] text-[#5c5954]'
                         }`}
                       >
                         {item.badge}
@@ -351,26 +359,26 @@ export const AdminControlCenter: React.FC = () => {
         </div>
 
         {/* Quick action buttons */}
-        <div className="p-3 border-t border-slate-700/50 space-y-2 bg-[#0f302e]">
+        <div className="p-3 border-t border-[#e2dfd9] bg-[#f4f4f2]/60">
           <button
             onClick={() => setIsOutboxOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-teal-500/30 transition-all cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white hover:bg-[#f5efe8] text-[#5c5954] hover:text-[#6e533c] text-xs font-semibold border border-[#e2dfd9] transition-all cursor-pointer calm-btn"
           >
-            <Mail className="size-3.5" />
-            <span>Open Email Outbox ({outbox.length})</span>
+            <Mail className="size-3.5 text-[#8c6d53]" />
+            <span>Email Outbox ({outbox.length})</span>
           </button>
         </div>
 
         {/* Footer: User profile & Logout */}
-        <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-[#0f2a2a]">
-          <div className="text-xs">
-            <p className="font-bold text-[#fffafa] truncate max-w-[140px]">{currentUser?.full_name || 'Admin User'}</p>
-            <p className="text-[11px] text-[#fcfdfe] font-mono truncate max-w-[140px]">{currentUser?.email}</p>
+        <div className="p-4 border-t border-[#e2dfd9] flex items-center justify-between bg-white">
+          <div className="text-xs min-w-0">
+            <p className="font-bold text-[#262523] truncate max-w-[145px]">{currentUser?.full_name || 'Admin User'}</p>
+            <p className="text-[11px] text-[#8c8881] font-mono truncate max-w-[145px]">{currentUser?.email}</p>
           </div>
           <button
             onClick={signOut}
             title="Sign out"
-            className="p-2 text-slate-300 hover:text-rose-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-[#5c5954] hover:text-[#262523] hover:bg-[#f4f4f2] rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="size-4" />
           </button>
@@ -380,17 +388,17 @@ export const AdminControlCenter: React.FC = () => {
       {/* Main Workspace View */}
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 backdrop-blur-md border-b border-[#123333] px-4 sm:px-8 py-3.5 flex items-center justify-between bg-[#123333] text-white shadow-md">
+        <header className="sticky top-0 z-30 border-b border-[#e2dfd9] px-4 sm:px-8 py-3.5 flex items-center justify-between bg-white text-[#262523]">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-white/20 text-white hover:bg-white/10 cursor-pointer"
+              className="lg:hidden p-2 rounded-xl border border-[#e2dfd9] text-[#5c5954] hover:bg-[#f4f4f2] cursor-pointer"
             >
               <Menu className="size-4" />
             </button>
             <div>
-              <h1 className="text-base sm:text-lg font-extrabold text-[#eceff7] tracking-tight">System Control Center</h1>
-              <p className="text-xs font-mono hidden sm:block text-[#ffffff]">{currentUser?.email}</p>
+              <h1 className="text-base sm:text-lg font-bold text-[#262523] tracking-tight">System Control Center</h1>
+              <p className="text-xs font-mono hidden sm:block text-[#8c8881]">{currentUser?.email}</p>
             </div>
           </div>
 
@@ -399,11 +407,11 @@ export const AdminControlCenter: React.FC = () => {
             <button
               onClick={() => setIsNotificationCenterOpen(true)}
               title="Notifications"
-              className="relative p-2 rounded-xl border border-slate-200 bg-[#ffffff] text-[#0f3b6c] hover:bg-slate-50 transition-all cursor-pointer"
+              className="relative p-2 rounded-xl border border-[#e2dfd9] bg-white text-[#5c5954] hover:text-[#262523] hover:bg-[#f4f4f2] transition-all cursor-pointer"
             >
               <Bell className="size-4" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-[#ffffff] text-[#0f3b6c] border border-[#ffffff] text-[10px] font-extrabold grid place-items-center shadow-xs">
+                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-[#8c6d53] text-white text-[10px] font-bold grid place-items-center tabular-nums">
                   {unreadNotificationsCount}
                 </span>
               )}
@@ -415,10 +423,10 @@ export const AdminControlCenter: React.FC = () => {
             {/* Export report button */}
             <button
               onClick={handleExportCSV}
-              className="hidden sm:flex items-center gap-1.5 bg-[#ffffff] hover:bg-slate-100 text-slate-900 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 shadow-xs transition-all cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 bg-[#8c6d53] hover:bg-[#765a43] text-white text-xs font-semibold px-3.5 py-2 rounded-xl border border-[#765a43] transition-all cursor-pointer calm-btn"
             >
               <Download className="size-3.5" />
-              <span>Export</span>
+              <span>Export CSV</span>
             </button>
           </div>
         </header>
@@ -427,134 +435,126 @@ export const AdminControlCenter: React.FC = () => {
         <main className="p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
           {/* Top Admin Notice if Pending Approvals Exist */}
           {pendingUsers.length > 0 && activeNav !== 'approvals' && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
-            >
+            <div className="rounded-2xl border border-[#d6c2b0] bg-[#f5efe8] p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="size-10 rounded-xl bg-amber-200 text-amber-900 grid place-items-center shrink-0">
+                <div className="size-10 rounded-xl bg-white text-[#8c6d53] border border-[#d6c2b0] grid place-items-center shrink-0">
                   <UserCheck className="size-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-amber-950">
+                  <h4 className="text-sm font-bold text-[#262523]">
                     {pendingUsers.length} User Registration{pendingUsers.length > 1 ? 's' : ''} Awaiting Admin Approval
                   </h4>
-                  <p className="text-xs text-amber-800 mt-0.5">
-                    New users must be explicitly approved before accessing customer or technician workspaces.
+                  <p className="text-xs text-[#6e533c] mt-0.5">
+                    New users must be approved before accessing customer or technician workspaces.
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={() => setActiveNav('approvals')}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-slate-900 font-bold text-xs shadow-xs cursor-pointer whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white font-semibold text-xs cursor-pointer whitespace-nowrap calm-btn"
               >
                 <span>Review Approvals ({pendingUsers.length})</span>
                 <ArrowUpRight className="size-3.5" />
               </button>
-            </motion.div>
+            </div>
           )}
 
-          <AnimatePresence mode="wait">
+          <div ref={contentRef} className="calm-fade-slide">
             {/* OVERVIEW TAB */}
             {activeNav === 'overview' && (
-              <motion.div
-                key="overview"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
+              <div className="space-y-5">
                 {/* Metric Cards Row */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-5 flex flex-col calm-card-hover">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Requests</p>
-                      <div className="size-10 rounded-full border border-slate-200 flex items-center justify-center overflow-hidden relative">
-                        <div className="absolute size-10 rounded-full border-[3px] border-t-blue-400 border-r-rose-400 border-b-emerald-400 border-l-amber-400 opacity-50"></div>
-                        <Inbox className="size-4 text-slate-600 relative z-10" />
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">Total Requests</p>
+                      <div className="size-9 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex items-center justify-center">
+                        <Inbox className="size-4 text-[#5c5954]" />
                       </div>
                     </div>
                     <div className="flex items-end justify-between mt-auto">
                       <div>
-                        <h3 className="text-3xl font-bold text-slate-900 leading-none">{totalTickets}</h3>
-                        <p className="text-xs text-slate-500 mt-1">all time</p>
+                        <h3 className="text-3xl font-bold text-[#262523] leading-none tabular-nums">{animTotalTickets}</h3>
+                        <p className="text-xs text-[#8c8881] mt-1">all time</p>
                       </div>
-                      <span className="text-[11px] font-bold text-blue-600 flex items-center gap-0.5">
-                        <span className="text-blue-500">●</span>Live Queue
+                      <span className="text-[11px] font-semibold text-[#6e533c] bg-[#f5efe8] px-2 py-0.5 rounded-md border border-[#d6c2b0]">
+                        Queue Active
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-5 flex flex-col calm-card-hover">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Open Workload</p>
-                      <div className="size-10 rounded-full bg-slate-50 flex items-center justify-center">
-                        <Clock className="size-4 text-slate-600" />
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">Open Workload</p>
+                      <div className="size-9 rounded-xl bg-[#f5efe8] border border-[#d6c2b0] flex items-center justify-center">
+                        <Clock className="size-4 text-[#8c6d53]" />
                       </div>
                     </div>
                     <div className="flex items-end justify-between mt-auto">
                       <div>
-                        <h3 className="text-3xl font-bold text-slate-900 leading-none">{openWorkload}</h3>
-                        <p className="text-xs text-slate-500 mt-1">unresolved</p>
+                        <h3 className="text-3xl font-bold text-[#262523] leading-none tabular-nums">{animOpenWorkload}</h3>
+                        <p className="text-xs text-[#8c8881] mt-1">unresolved</p>
                       </div>
-                      <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5">
+                      <span className="text-[11px] font-semibold text-[#5c5954] tabular-nums">
                         {totalTickets > 0 ? `${Math.round((openWorkload / totalTickets) * 100)}% of total` : '0%'}
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-5 flex flex-col calm-card-hover">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Urgent</p>
-                      <div className="size-10 rounded-full bg-rose-50 flex items-center justify-center">
-                        <AlertOctagon className="size-4 text-rose-500" />
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">Priority Queue</p>
+                      <div className="size-9 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex items-center justify-center">
+                        <AlertOctagon className="size-4 text-[#6e533c]" />
                       </div>
                     </div>
                     <div className="flex items-end justify-between mt-auto">
                       <div>
-                        <h3 className="text-3xl font-bold text-slate-900 leading-none">{urgentTickets}</h3>
-                        <p className="text-xs text-slate-500 mt-1">needs escalation</p>
+                        <h3 className="text-3xl font-bold text-[#262523] leading-none tabular-nums">{animUrgentTickets}</h3>
+                        <p className="text-xs text-[#8c8881] mt-1">escalated / high</p>
                       </div>
-                      <span className={`text-[11px] font-bold flex items-center gap-0.5 ${urgentTickets > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                        {urgentTickets > 0 ? `▲ ${urgentTickets} active` : '✓ None active'}
+                      <span className={`text-[11px] font-semibold ${urgentTickets > 0 ? 'text-[#6e533c]' : 'text-[#2f6b45]'}`}>
+                        {urgentTickets > 0 ? `${urgentTickets} active` : 'Clear'}
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-5 flex flex-col calm-card-hover">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">AI Confidence</p>
-                      <div className="size-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                        <Sparkles className="size-4 text-emerald-500" />
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">AI Confidence</p>
+                      <div className="size-9 rounded-xl bg-[#e6f4ea] border border-[#c6e6d0] flex items-center justify-center">
+                        <Sparkles className="size-4 text-[#2f6b45]" />
                       </div>
                     </div>
                     <div className="flex items-end justify-between mt-auto">
                       <div>
-                        <h3 className="text-3xl font-bold text-slate-900 leading-none">{aiConfidencePct}%</h3>
-                        <p className="text-xs text-slate-500 mt-1">{aiClassifiedCount} auto-triaged</p>
+                        <h3 className="text-3xl font-bold text-[#2f6b45] leading-none tabular-nums">{animAiConfidence}%</h3>
+                        <p className="text-xs text-[#8c8881] mt-1">{aiClassifiedCount} auto-triaged</p>
                       </div>
-                      <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5">
-                        {totalTickets > 0 ? `${Math.round((aiClassifiedCount / totalTickets) * 100)}% coverage` : '0%'}
+                      <span className="text-[11px] font-semibold text-[#2f6b45] bg-[#e6f4ea] px-2 py-0.5 rounded-md border border-[#c6e6d0] tabular-nums">
+                        {totalTickets > 0 ? `${Math.round((aiClassifiedCount / totalTickets) * 100)}%` : '0%'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Second Row: Big Chart + Bar Chart */}
+                {/* Second Row: Throughput Chart + Category Distribution */}
                 <div className="grid lg:grid-cols-3 gap-4">
-                  {/* Line Chart */}
-                  <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                  {/* Area Chart */}
+                  <div className="lg:col-span-2 bg-white border border-[#e2dfd9] rounded-2xl p-5">
                     <div className="flex items-start justify-between mb-6">
                       <div>
-                        <h3 className="text-sm font-bold text-slate-900">7-Day Ticket Throughput</h3>
-                        <p className="text-xs text-slate-500">Created vs resolved volume</p>
+                        <h3 className="text-sm font-bold text-[#262523]">7-Day Ticket Throughput</h3>
+                        <p className="text-xs text-[#5c5954]">Created vs resolved volume</p>
                       </div>
-                      <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
-                        <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-blue-600"></div>Created</div>
-                        <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-emerald-500"></div>Resolved</div>
+                      <div className="flex items-center gap-4 text-xs font-semibold text-[#5c5954]">
+                        <div className="flex items-center gap-1.5">
+                          <div className="size-2.5 rounded-full bg-[#8c6d53]"></div>Created
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="size-2.5 rounded-full bg-[#2f6b45]"></div>Resolved
+                        </div>
                       </div>
                     </div>
                     <div className="h-[220px] w-full">
@@ -562,38 +562,45 @@ export const AdminControlCenter: React.FC = () => {
                         <AreaChart data={volumeChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                           <defs>
                             <linearGradient id="colorCreated" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#2563eb" stopOpacity={0.6} />
-                              <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#8c6d53" stopOpacity={0.35} />
+                              <stop offset="95%" stopColor="#8c6d53" stopOpacity={0} />
                             </linearGradient>
                             <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.6} />
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#2f6b45" stopOpacity={0.35} />
+                              <stop offset="95%" stopColor="#2f6b45" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                          <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} allowDecimals={false} />
-                          <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                          <Area type="monotone" dataKey="created" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorCreated)" />
-                          <Area type="monotone" dataKey="resolved" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorResolved)" />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ebe9e4" />
+                          <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#8c8881' }} dy={10} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#8c8881' }} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{
+                              borderRadius: '10px',
+                              border: '1px solid #e2dfd9',
+                              backgroundColor: '#ffffff',
+                              boxShadow: '0 4px 12px rgba(38, 37, 35, 0.06)',
+                              fontSize: '12px',
+                            }}
+                          />
+                          <Area type="monotone" dataKey="created" stroke="#8c6d53" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCreated)" />
+                          <Area type="monotone" dataKey="resolved" stroke="#2f6b45" strokeWidth={2.5} fillOpacity={1} fill="url(#colorResolved)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
                   {/* Horizontal Bar Chart for Categories */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-5 flex flex-col">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h3 className="text-sm font-bold text-slate-900">Issue Categories</h3>
-                        <p className="text-xs text-slate-500">Distribution across domains</p>
+                        <h3 className="text-sm font-bold text-[#262523]">Issue Categories</h3>
+                        <p className="text-xs text-[#5c5954]">Distribution across domains</p>
                       </div>
-                      <p className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Live sync
-                      </p>
+                      <span className="text-[10px] font-semibold text-[#2f6b45] bg-[#e6f4ea] px-2 py-0.5 rounded border border-[#c6e6d0]">
+                        Synced
+                      </span>
                     </div>
-                    
+
                     <div className="flex-1 flex flex-col justify-center space-y-4">
                       {categoryBreakdownData.map((cat) => {
                         const uPct = cat.total > 0 ? (cat.urgent / cat.total) * 100 : 0;
@@ -603,169 +610,161 @@ export const AdminControlCenter: React.FC = () => {
 
                         return (
                           <div key={cat.key} className="flex items-center gap-3">
-                            <div className="w-20 text-xs text-slate-700 text-right font-medium truncate flex items-center justify-end gap-1">
+                            <div className="w-24 text-xs text-[#262523] text-right font-medium truncate flex items-center justify-end gap-1">
                               <span>{cat.name}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">({cat.total})</span>
+                              <span className="text-[10px] text-[#8c8881] font-mono tabular-nums">({cat.total})</span>
                             </div>
-                            <div className="flex-1 h-4 flex rounded-sm overflow-hidden bg-slate-100">
+                            <div className="flex-1 h-3.5 flex rounded-md overflow-hidden bg-[#f4f4f2] border border-[#e2dfd9]">
                               {cat.total > 0 ? (
                                 <>
-                                  {uPct > 0 && <div style={{ width: `${uPct}%` }} className="bg-rose-500" title={`Urgent: ${cat.urgent}`} />}
-                                  {hPct > 0 && <div style={{ width: `${hPct}%` }} className="bg-amber-500" title={`High: ${cat.high}`} />}
-                                  {mPct > 0 && <div style={{ width: `${mPct}%` }} className="bg-amber-300" title={`Medium: ${cat.medium}`} />}
-                                  {lPct > 0 && <div style={{ width: `${lPct}%` }} className="bg-emerald-500" title={`Low: ${cat.low}`} />}
+                                  {uPct > 0 && <div style={{ width: `${uPct}%` }} className="bg-[#6e533c]" title={`Urgent: ${cat.urgent}`} />}
+                                  {hPct > 0 && <div style={{ width: `${hPct}%` }} className="bg-[#8c6d53]" title={`High: ${cat.high}`} />}
+                                  {mPct > 0 && <div style={{ width: `${mPct}%` }} className="bg-[#bfa893]" title={`Medium: ${cat.medium}`} />}
+                                  {lPct > 0 && <div style={{ width: `${lPct}%` }} className="bg-[#2f6b45]" title={`Low: ${cat.low}`} />}
                                 </>
                               ) : (
-                                <div className="w-full bg-slate-50 text-[9px] text-slate-400 text-center leading-4 font-mono">0 requests</div>
+                                <div className="w-full bg-[#f4f4f2] text-[9px] text-[#8c8881] text-center leading-3.5 font-mono">0 requests</div>
                               )}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    
-                    <div className="flex items-center justify-center gap-3 mt-4 text-[10px] font-semibold text-slate-600">
-                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-rose-500"></div>Urgent</div>
-                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-amber-500"></div>High</div>
-                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-amber-300"></div>Medium</div>
-                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-emerald-500"></div>Low</div>
+
+                    <div className="flex items-center justify-center gap-3 mt-4 text-[10px] font-semibold text-[#5c5954]">
+                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-[#6e533c]"></div>Urgent</div>
+                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-[#8c6d53]"></div>High</div>
+                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-[#bfa893]"></div>Medium</div>
+                      <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-[#2f6b45]"></div>Low</div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Third Row */}
+
+                {/* Third Row: Status Distribution & Platform Health */}
                 <div className="grid lg:grid-cols-3 gap-4">
-                   {/* Status Donut & Bar */}
-                   <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900">Status Distribution</h3>
-                          <p className="text-xs text-slate-500">Active queue breakdown</p>
-                        </div>
-                        <p className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
-                          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                          Live sync
-                        </p>
+                  <div className="lg:col-span-2 bg-white border border-[#e2dfd9] rounded-2xl p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-[#262523]">Status Distribution</h3>
+                        <p className="text-xs text-[#5c5954]">Active queue breakdown</p>
                       </div>
-                      <div className="flex items-center gap-8 h-[100px]">
-                        <div className="relative size-[90px] shrink-0">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={statusChartData.filter((s) => s.count > 0).length > 0 ? statusChartData.filter((s) => s.count > 0) : [{ name: 'None', count: 1, color: '#e2e8f0' }]}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={25}
-                                outerRadius={40}
-                                paddingAngle={2}
-                                dataKey="count"
-                                stroke="none"
-                              >
-                                {(statusChartData.filter((s) => s.count > 0).length > 0 ? statusChartData.filter((s) => s.count > 0) : [{ name: 'None', count: 1, color: '#e2e8f0' }]).map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
+                      <span className="text-[10px] font-semibold text-[#5c5954] bg-[#f4f4f2] px-2 py-0.5 rounded border border-[#e2dfd9]">
+                        Real-time
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-6 h-[100px]">
+                      <div className="relative size-[90px] shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={statusChartData.filter((s) => s.count > 0).length > 0 ? statusChartData.filter((s) => s.count > 0) : [{ name: 'None', count: 1, color: '#e2dfd9' }]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={25}
+                              outerRadius={40}
+                              paddingAngle={2}
+                              dataKey="count"
+                              stroke="none"
+                            >
+                              {(statusChartData.filter((s) => s.count > 0).length > 0 ? statusChartData.filter((s) => s.count > 0) : [{ name: 'None', count: 1, color: '#e2dfd9' }]).map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="w-full h-7 flex rounded-lg overflow-hidden bg-[#f4f4f2] border border-[#e2dfd9]">
+                          {totalTickets > 0 && statusChartData.some((s) => s.count > 0) ? (
+                            statusChartData
+                              .filter((s) => s.count > 0)
+                              .map((s) => (
+                                <div
+                                  key={s.key}
+                                  style={{ width: `${s.percentage}%`, backgroundColor: s.color }}
+                                  className="flex items-center justify-center text-[10px] font-bold text-white transition-all overflow-hidden px-1 tabular-nums"
+                                  title={`${s.name}: ${s.count} (${Math.round(s.percentage)}%)`}
+                                >
+                                  {s.count}
+                                </div>
+                              ))
+                          ) : (
+                            <div className="w-full flex items-center justify-center text-xs text-[#8c8881]">No tickets in system</div>
+                          )}
                         </div>
-                        <div className="flex-1 flex flex-col gap-2">
-                           <div className="w-full h-8 flex rounded overflow-hidden bg-slate-100">
-                             {totalTickets > 0 && statusChartData.some((s) => s.count > 0) ? (
-                               statusChartData
-                                 .filter((s) => s.count > 0)
-                                 .map((s) => (
-                                   <div
-                                     key={s.key}
-                                     style={{ width: `${s.percentage}%`, backgroundColor: s.color }}
-                                     className="flex items-center justify-center text-[10px] font-bold text-white transition-all overflow-hidden px-1"
-                                     title={`${s.name}: ${s.count} (${Math.round(s.percentage)}%)`}
-                                   >
-                                     {s.count}
-                                   </div>
-                                 ))
-                             ) : (
-                               <div className="w-full flex items-center justify-center text-xs text-slate-400">No tickets in system</div>
-                             )}
-                           </div>
-                           <div className="flex flex-wrap items-center justify-between mt-1 px-1 gap-y-1 gap-x-2">
-                             {statusChartData.map((s) => (
-                               <div key={s.key} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600">
-                                 <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: s.color }}></div>
-                                 <span>{s.name} ({s.count})</span>
-                               </div>
-                             ))}
-                           </div>
+                        <div className="flex flex-wrap items-center justify-between mt-1 px-1 gap-y-1 gap-x-2">
+                          {statusChartData.map((s) => (
+                            <div key={s.key} className="flex items-center gap-1.5 text-[10px] font-semibold text-[#5c5954] tabular-nums">
+                              <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: s.color }}></div>
+                              <span>{s.name} ({s.count})</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                   </div>
-                   
-                   {/* Platform Health */}
-                   <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-bold text-slate-900">Platform Health</h3>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-bold flex items-center gap-1">
-                          OPERATIONAL <div className="size-1.5 bg-emerald-500 rounded-full"></div>
-                        </span>
+                    </div>
+                  </div>
+
+                  {/* Platform Health — Light Green for Nominal Operational status */}
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-5 flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-bold text-[#262523]">Platform Health</h3>
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] text-[10px] font-bold flex items-center gap-1">
+                        OPERATIONAL
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-[#5c5954]"><CheckCircle2 className="size-3.5 text-[#2f6b45]" /> API</div>
+                        <span className="font-mono text-[#2f6b45] tabular-nums">45ms</span>
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                         <div className="flex items-center justify-between text-xs">
-                           <div className="flex items-center gap-1.5 text-slate-600"><CheckCircle2 className="size-3 text-emerald-500" /> API</div>
-                           <span className="font-mono text-emerald-600">45ms</span>
-                         </div>
-                         <div className="flex items-center justify-between text-xs">
-                           <div className="flex items-center gap-1.5 text-slate-600"><CheckCircle2 className="size-3 text-emerald-500" /> DB</div>
-                           <span className="font-mono text-emerald-600">12ms</span>
-                         </div>
-                         <div className="flex items-center justify-between text-xs">
-                           <div className="flex items-center gap-1.5 text-slate-600"><CheckCircle2 className="size-3 text-emerald-500" /> Webhook</div>
-                           <span className="font-mono text-emerald-600">23ms</span>
-                         </div>
-                         <div className="flex items-center justify-between text-xs">
-                           <div className="flex items-center gap-1.5 text-slate-600"><CheckCircle2 className="size-3 text-emerald-500" /> Auth</div>
-                           <span className="font-mono text-emerald-600">34ms</span>
-                         </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-[#5c5954]"><CheckCircle2 className="size-3.5 text-[#2f6b45]" /> DB</div>
+                        <span className="font-mono text-[#2f6b45] tabular-nums">12ms</span>
                       </div>
-                      <div className="mt-auto pt-3 border-t border-slate-100 space-y-1">
-                         <div className="flex justify-between text-xs">
-                            <span className="text-slate-500">Uptime:</span>
-                            <span className="font-mono text-slate-900 font-medium">99.98%</span>
-                         </div>
-                         <div className="flex justify-between text-xs">
-                            <span className="text-slate-500">Recent Incidents:</span>
-                            <span className="text-slate-900 font-medium">None</span>
-                         </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-[#5c5954]"><CheckCircle2 className="size-3.5 text-[#2f6b45]" /> Webhook</div>
+                        <span className="font-mono text-[#2f6b45] tabular-nums">23ms</span>
                       </div>
-                   </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-[#5c5954]"><CheckCircle2 className="size-3.5 text-[#2f6b45]" /> Auth</div>
+                        <span className="font-mono text-[#2f6b45] tabular-nums">34ms</span>
+                      </div>
+                    </div>
+                    <div className="mt-auto pt-3 border-t border-[#ebe9e4] space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#8c8881]">Uptime:</span>
+                        <span className="font-mono text-[#262523] font-medium tabular-nums">99.98%</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#8c8881]">Recent Incidents:</span>
+                        <span className="text-[#2f6b45] font-medium">None</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </motion.div>
+              </div>
             )}
+
             {/* USER APPROVALS TAB */}
             {activeNav === 'approvals' && (
-              <motion.div
-                key="approvals"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
+              <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-xl font-extrabold text-slate-900">User Approvals</h2>
-                    <p className="text-xs text-slate-500">
+                    <h2 className="text-xl font-bold text-[#262523]">User Approvals</h2>
+                    <p className="text-xs text-[#5c5954]">
                       Mandatory approval gate: review and authorize newly registered accounts
                     </p>
                   </div>
-                  <span className="px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200 self-start sm:self-auto">
+                  <span className="px-3 py-1 text-xs font-bold rounded-full bg-[#f5efe8] text-[#6e533c] border border-[#d6c2b0] self-start sm:self-auto tabular-nums">
                     {pendingUsers.length} Pending Approval
                   </span>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="border-b border-slate-100 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+                      <thead className="border-b border-[#e2dfd9] bg-[#f4f4f2] font-bold uppercase tracking-wider text-[#5c5954] text-[10px]">
                         <tr>
                           <th className="px-5 py-3.5">User & Email</th>
                           <th className="px-5 py-3.5">Company</th>
@@ -774,56 +773,56 @@ export const AdminControlCenter: React.FC = () => {
                           <th className="px-5 py-3.5 text-right">Approve As</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-[#ebe9e4]">
                         {pendingUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-5 py-12 text-center text-xs text-slate-500 space-y-2">
-                              <CheckCircle2 className="size-8 text-emerald-500 mx-auto" />
-                              <p className="font-bold text-slate-800 text-sm">All caught up!</p>
-                              <p className="text-slate-400">There are no pending user registration requests at this time.</p>
+                            <td colSpan={5} className="px-5 py-12 text-center text-xs text-[#5c5954] space-y-2">
+                              <CheckCircle2 className="size-8 text-[#2f6b45] mx-auto" />
+                              <p className="font-bold text-[#262523] text-sm">All caught up</p>
+                              <p className="text-[#8c8881]">There are no pending user registration requests at this time.</p>
                             </td>
                           </tr>
                         ) : (
                           pendingUsers.map((u) => (
-                            <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                            <tr key={u.id} className="hover:bg-[#f4f4f2]/60 transition-colors">
                               <td className="px-5 py-3.5">
-                                <p className="font-bold text-slate-900">{u.full_name}</p>
-                                <p className="text-xs text-slate-500 font-mono">{u.email}</p>
+                                <p className="font-bold text-[#262523]">{u.full_name}</p>
+                                <p className="text-xs text-[#8c8881] font-mono">{u.email}</p>
                               </td>
-                              <td className="px-5 py-3.5 text-slate-600">{u.company || 'Enterprise'}</td>
+                              <td className="px-5 py-3.5 text-[#5c5954]">{u.company || 'Enterprise'}</td>
                               <td className="px-5 py-3.5">
-                                <span className="font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded uppercase text-[10px]">
+                                <span className="font-bold text-[#6e533c] bg-[#f5efe8] border border-[#d6c2b0] px-2 py-0.5 rounded uppercase text-[10px]">
                                   {u.role}
                                 </span>
                               </td>
-                              <td className="px-5 py-3.5 text-slate-500">
+                              <td className="px-5 py-3.5 text-[#8c8881] tabular-nums">
                                 {new Date(u.created_at).toLocaleDateString()}
                               </td>
                               <td className="px-5 py-3.5 text-right space-x-1.5">
                                 <button
                                   onClick={() => approveUser(u.id, 'user')}
-                                  className="px-2.5 py-1 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer transition-all"
+                                  className="px-2.5 py-1 text-xs font-semibold text-[#262523] bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] rounded-lg cursor-pointer transition-all"
                                   title="Approve as Standard Customer"
                                 >
                                   Customer
                                 </button>
                                 <button
                                   onClick={() => approveUser(u.id, 'technician')}
-                                  className="px-2.5 py-1 text-xs font-bold text-cyan-900 bg-cyan-100 hover:bg-cyan-200 rounded-lg cursor-pointer transition-all"
+                                  className="px-2.5 py-1 text-xs font-semibold text-white bg-[#8c6d53] hover:bg-[#765a43] rounded-lg cursor-pointer transition-all"
                                   title="Approve with Technician privileges"
                                 >
                                   Technician
                                 </button>
                                 <button
                                   onClick={() => approveUser(u.id, 'admin')}
-                                  className="px-2.5 py-1 text-xs font-bold text-purple-900 bg-purple-100 hover:bg-purple-200 rounded-lg cursor-pointer transition-all"
+                                  className="px-2.5 py-1 text-xs font-semibold text-[#6e533c] bg-[#f5efe8] hover:bg-[#ebe0d4] border border-[#d6c2b0] rounded-lg cursor-pointer transition-all"
                                   title="Approve as Administrator"
                                 >
                                   Admin
                                 </button>
                                 <button
                                   onClick={() => rejectUser(u.id)}
-                                  className="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg cursor-pointer transition-all"
+                                  className="px-2.5 py-1 text-xs font-semibold text-[#5c5954] bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] rounded-lg cursor-pointer transition-all"
                                   title="Reject registration"
                                 >
                                   <UserX className="size-3.5 inline" />
@@ -836,69 +835,62 @@ export const AdminControlCenter: React.FC = () => {
                     </table>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* USERS & ROLES TAB */}
             {activeNav === 'users' && (
-              <motion.div
-                key="users"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
+              <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-extrabold text-slate-900">Users & Roles</h2>
-                    <p className="text-xs text-slate-500">Manage permissions, elevated technicians, and admin access</p>
+                    <h2 className="text-xl font-bold text-[#262523]">Users & Roles</h2>
+                    <p className="text-xs text-[#5c5954]">Manage permissions, elevated technicians, and admin access</p>
                   </div>
                   <div className="relative max-w-xs w-full">
-                    <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8c8881]" />
                     <input
                       type="text"
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
                       placeholder="Search users..."
-                      className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-1.5 text-xs text-slate-800 outline-none focus:border-cyan-500"
+                      className="w-full rounded-xl border border-[#e2dfd9] bg-white pl-9 pr-3 py-1.5 text-xs text-[#262523] outline-none focus:border-[#8c6d53]"
                     />
                   </div>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="border-b border-slate-100 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+                      <thead className="border-b border-[#e2dfd9] bg-[#f4f4f2] font-bold uppercase tracking-wider text-[#5c5954] text-[10px]">
                         <tr>
                           <th className="px-5 py-3.5">Name & Email</th>
                           <th className="px-5 py-3.5">Company</th>
                           <th className="px-5 py-3.5">Role</th>
                           <th className="px-5 py-3.5">Status</th>
-                          <th className="px-5 py-3.5">Registered</th>
+                          <th className="px-5 py-3.5">Joined</th>
                           <th className="px-5 py-3.5 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-[#ebe9e4]">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-5 py-8 text-center text-xs text-slate-500">
-                              No users match your search filter.
+                            <td colSpan={6} className="px-5 py-8 text-center text-xs text-[#8c8881]">
+                              No users match your search.
                             </td>
                           </tr>
                         ) : (
                           filteredUsers.map((u) => (
-                            <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                            <tr key={u.id} className="hover:bg-[#f4f4f2]/60 transition-colors">
                               <td className="px-5 py-3.5">
-                                <p className="font-bold text-slate-900">{u.full_name}</p>
-                                <p className="text-xs text-slate-500 font-mono">{u.email}</p>
+                                <p className="font-bold text-[#262523]">{u.full_name}</p>
+                                <p className="text-[11px] text-[#8c8881] font-mono">{u.email}</p>
                               </td>
-                              <td className="px-5 py-3.5 text-slate-600">{u.company || 'Enterprise'}</td>
+                              <td className="px-5 py-3.5 text-[#5c5954]">{u.company || 'Enterprise'}</td>
                               <td className="px-5 py-3.5">
                                 <select
                                   value={u.role}
                                   onChange={(e) => updateUserRole(u.id, e.target.value as UserRole)}
-                                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold capitalize text-slate-800 outline-none cursor-pointer"
+                                  className="rounded-lg border border-[#e2dfd9] bg-[#f4f4f2] px-2.5 py-1 text-xs font-semibold text-[#262523] outline-none focus:border-[#8c6d53] cursor-pointer"
                                 >
                                   <option value="admin">Admin</option>
                                   <option value="technician">Technician</option>
@@ -907,55 +899,55 @@ export const AdminControlCenter: React.FC = () => {
                               </td>
                               <td className="px-5 py-3.5">
                                 {u.banned ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 px-2.5 py-0.5 text-[11px] font-semibold">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#ebe9e4] text-[#5c5954] border border-[#d5d1c8] px-2.5 py-0.5 text-[11px] font-semibold">
                                     <Ban className="size-3" /> Suspended
                                   </span>
                                 ) : u.rejected ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 px-2.5 py-0.5 text-[11px] font-semibold">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#ebe9e4] text-[#5c5954] border border-[#d5d1c8] px-2.5 py-0.5 text-[11px] font-semibold">
                                     Rejected
                                   </span>
                                 ) : u.is_approved ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[11px] font-semibold">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] px-2.5 py-0.5 text-[11px] font-semibold">
                                     <CheckCircle2 className="size-3" /> Approved
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-[11px] font-semibold">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f5efe8] text-[#6e533c] border border-[#d6c2b0] px-2.5 py-0.5 text-[11px] font-semibold">
                                     Pending Admin
                                   </span>
                                 )}
                               </td>
-                              <td className="px-5 py-3.5 text-slate-500">
+                              <td className="px-5 py-3.5 text-[#8c8881] tabular-nums">
                                 {new Date(u.created_at).toLocaleDateString()}
                               </td>
                               <td className="px-5 py-3.5 text-right space-x-1.5">
                                 {!u.is_approved && (
                                   <button
                                     onClick={() => approveUser(u.id, u.role)}
-                                    className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg cursor-pointer"
+                                    className="px-2.5 py-1 text-xs font-bold text-[#2f6b45] bg-[#e6f4ea] hover:bg-[#d7ede0] border border-[#c6e6d0] rounded-lg cursor-pointer"
                                   >
                                     Approve
                                   </button>
                                 )}
                                 <button
                                   onClick={() => updateUserStatus(u.id, { banned: !u.banned })}
-                                  className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-rose-600 border border-slate-200 rounded-lg cursor-pointer"
+                                  className="px-2.5 py-1 text-xs font-semibold text-[#5c5954] hover:text-[#262523] border border-[#e2dfd9] bg-white hover:bg-[#f4f4f2] rounded-lg cursor-pointer"
                                 >
                                   {u.banned ? 'Restore' : 'Suspend'}
                                 </button>
                                 {userToDelete === u.id ? (
-                                  <div className="flex items-center gap-1">
+                                  <div className="inline-flex items-center gap-1">
                                     <button
                                       onClick={() => {
                                         deleteUser(u.id);
                                         setUserToDelete(null);
                                       }}
-                                      className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg cursor-pointer shadow-sm animate-pulse"
+                                      className="px-3 py-1 text-xs font-bold text-white bg-[#6e533c] hover:bg-[#59422f] rounded-lg cursor-pointer"
                                     >
-                                      Confirm Delete
+                                      Confirm
                                     </button>
                                     <button
                                       onClick={() => setUserToDelete(null)}
-                                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-300 hover:bg-slate-100 rounded-lg cursor-pointer"
+                                      className="px-2.5 py-1 text-xs font-semibold text-[#5c5954] border border-[#e2dfd9] hover:bg-[#f4f4f2] rounded-lg cursor-pointer"
                                     >
                                       Cancel
                                     </button>
@@ -963,7 +955,7 @@ export const AdminControlCenter: React.FC = () => {
                                 ) : (
                                   <button
                                     onClick={() => setUserToDelete(u.id)}
-                                    className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg cursor-pointer transition-colors"
+                                    className="px-2.5 py-1 text-xs font-semibold text-[#5c5954] bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] rounded-lg cursor-pointer transition-colors"
                                   >
                                     Delete
                                   </button>
@@ -976,28 +968,21 @@ export const AdminControlCenter: React.FC = () => {
                     </table>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* ALL REQUESTS TAB */}
             {activeNav === 'requests' && (
-              <motion.div
-                key="requests"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
+              <div className="space-y-4">
                 {/* Filter controls */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-1 items-center gap-2 min-w-[240px] rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2">
-                    <Search className="size-4 text-slate-400 shrink-0" />
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-1 items-center gap-2 min-w-[240px] rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] px-3.5 py-2">
+                    <Search className="size-4 text-[#8c8881] shrink-0" />
                     <input
                       value={ticketSearch}
                       onChange={(e) => setTicketSearch(e.target.value)}
                       placeholder="Search requests by title, user or company..."
-                      className="w-full bg-transparent text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                      className="w-full bg-transparent text-xs text-[#262523] outline-none placeholder:text-[#8c8881]"
                     />
                   </div>
 
@@ -1005,7 +990,7 @@ export const AdminControlCenter: React.FC = () => {
                     <select
                       value={catFilter}
                       onChange={(e) => setCatFilter(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-800 outline-none cursor-pointer"
+                      className="rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] px-3 py-2 font-medium text-[#262523] outline-none cursor-pointer"
                     >
                       <option value="all">All Categories</option>
                       {CATEGORIES.map((c) => (
@@ -1016,7 +1001,7 @@ export const AdminControlCenter: React.FC = () => {
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-800 outline-none cursor-pointer"
+                      className="rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] px-3 py-2 font-medium text-[#262523] outline-none cursor-pointer"
                     >
                       <option value="all">All Statuses</option>
                       <option value="new">New</option>
@@ -1028,10 +1013,10 @@ export const AdminControlCenter: React.FC = () => {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="border-b border-slate-100 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+                      <thead className="border-b border-[#e2dfd9] bg-[#f4f4f2] font-bold uppercase tracking-wider text-[#5c5954] text-[10px]">
                         <tr>
                           <th className="px-5 py-3.5">ID</th>
                           <th className="px-5 py-3.5">Title</th>
@@ -1042,137 +1027,139 @@ export const AdminControlCenter: React.FC = () => {
                           <th className="px-5 py-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-[#ebe9e4]">
                         {filteredTickets.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-5 py-12 text-center text-xs text-slate-500">
-                              <Inbox className="size-8 text-slate-700 mx-auto mb-2" />
-                              <p className="font-bold text-slate-700 text-sm">No tickets found</p>
-                              <p className="text-slate-400 mt-1">Submitted service requests will appear here in real-time.</p>
+                            <td colSpan={7} className="px-5 py-12 text-center text-xs text-[#5c5954]">
+                              <Inbox className="size-8 text-[#8c8881] mx-auto mb-2" />
+                              <p className="font-bold text-[#262523] text-sm">No tickets found</p>
+                              <p className="text-[#8c8881] mt-1">Submitted service requests will appear here in real-time.</p>
                             </td>
                           </tr>
                         ) : (
-                          filteredTickets.map((t) => (
-                            <tr
-                              key={t.id}
-                              onClick={() => setSelectedTicket(t)}
-                              className="hover:bg-slate-50/70 cursor-pointer transition-colors"
-                            >
-                              <td className="px-5 py-3.5 font-mono font-bold text-blue-600">{t.id}</td>
-                              <td className="px-5 py-3.5 font-bold text-slate-900">{t.title}</td>
-                              <td className="px-5 py-3.5 text-slate-500">{getCategoryLabel(t.category)}</td>
-                              <td className="px-5 py-3.5">
-                                <span className="capitalize font-semibold text-slate-700">{t.priority}</span>
-                              </td>
-                              <td className="px-5 py-3.5">
-                                <span className="capitalize font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
-                                  {formatStatus(t.status)}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3.5 text-slate-700">{t.requester_name}</td>
-                              <td className="px-5 py-3.5 text-right">
-                                <button className="text-blue-600 font-bold hover:underline cursor-pointer">Inspect</button>
-                              </td>
-                            </tr>
-                          ))
+                          filteredTickets.map((t) => {
+                            const isResolved = t.status === 'resolved' || t.status === 'closed';
+                            return (
+                              <tr
+                                key={t.id}
+                                onClick={() => setSelectedTicket(t)}
+                                className="hover:bg-[#f4f4f2]/70 cursor-pointer transition-colors"
+                              >
+                                <td className="px-5 py-3.5 font-mono font-bold text-[#8c6d53]">{t.id}</td>
+                                <td className="px-5 py-3.5 font-bold text-[#262523]">{t.title}</td>
+                                <td className="px-5 py-3.5 text-[#5c5954]">{getCategoryLabel(t.category)}</td>
+                                <td className="px-5 py-3.5">
+                                  <span className="capitalize font-semibold text-[#5c5954]">{t.priority}</span>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  <span
+                                    className={`capitalize font-semibold px-2.5 py-0.5 rounded-full border ${
+                                      isResolved
+                                        ? 'bg-[#e6f4ea] text-[#2f6b45] border-[#c6e6d0]'
+                                        : 'bg-[#f5efe8] text-[#6e533c] border-[#d6c2b0]'
+                                    }`}
+                                  >
+                                    {formatStatus(t.status)}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3.5 text-[#262523]">{t.requester_name}</td>
+                                <td className="px-5 py-3.5 text-right">
+                                  <button className="text-[#8c6d53] font-bold hover:underline cursor-pointer">Inspect</button>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* AI GOVERNANCE & COMPLIANCE TAB */}
             {activeNav === 'governance' && (
-              <motion.div
-                key="governance"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
+              <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-extrabold text-slate-900">AI Governance & Compliance</h2>
-                  <p className="text-xs text-slate-600 mt-1">Manage AI decision boundaries, automated workflows, and data ethics.</p>
+                  <h2 className="text-xl font-bold text-[#262523]">AI Governance & Compliance</h2>
+                  <p className="text-xs text-[#5c5954] mt-1">Manage AI decision boundaries, automated workflows, and data ethics.</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                      <Cpu className="size-5 text-indigo-600" />
-                      <h3 className="font-bold text-slate-900 text-sm">Automated Workflow Engine</h3>
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-5">
+                    <div className="flex items-center gap-3 border-b border-[#ebe9e4] pb-4">
+                      <Cpu className="size-5 text-[#8c6d53]" />
+                      <h3 className="font-bold text-[#262523] text-sm">Automated Workflow Engine</h3>
                     </div>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="flex items-center justify-between p-4 bg-[#f4f4f2] border border-[#e2dfd9] rounded-xl">
                         <div>
-                          <p className="font-bold text-slate-900 text-xs">High-Priority Escalation</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Auto-escalate tickets assessed as 'Critical' with &gt; 80% confidence</p>
+                          <p className="font-bold text-[#262523] text-xs">High-Priority Escalation</p>
+                          <p className="text-[11px] text-[#5c5954] mt-0.5">Auto-escalate tickets assessed as Critical with &gt; 80% confidence</p>
                         </div>
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">ACTIVE</span>
+                        <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold text-[10px]">ACTIVE</span>
                       </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+
+                      <div className="flex items-center justify-between p-4 bg-[#f4f4f2] border border-[#e2dfd9] rounded-xl">
                         <div>
-                          <p className="font-bold text-slate-900 text-xs">Draft Response Generation</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Pre-generate contextually aware AI responses for Technician review</p>
+                          <p className="font-bold text-[#262523] text-xs">Draft Response Generation</p>
+                          <p className="text-[11px] text-[#5c5954] mt-0.5">Pre-generate contextually aware AI responses for Technician review</p>
                         </div>
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">ACTIVE</span>
+                        <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold text-[10px]">ACTIVE</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
-                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                      <ShieldCheck className="size-5 text-indigo-600" />
-                      <h3 className="font-bold text-slate-900 text-sm">Responsible AI & Data Privacy</h3>
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-5">
+                    <div className="flex items-center gap-3 border-b border-[#ebe9e4] pb-4">
+                      <ShieldCheck className="size-5 text-[#8c6d53]" />
+                      <h3 className="font-bold text-[#262523] text-sm">Responsible AI & Data Privacy</h3>
                     </div>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="flex items-center justify-between p-4 bg-[#f4f4f2] border border-[#e2dfd9] rounded-xl">
                         <div>
-                          <p className="font-bold text-slate-900 text-xs">Human-in-the-loop (HITL)</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">AI drafts require manual technician approval before dispatch</p>
+                          <p className="font-bold text-[#262523] text-xs">Human-in-the-loop (HITL)</p>
+                          <p className="text-[11px] text-[#5c5954] mt-0.5">AI drafts require manual technician approval before dispatch</p>
                         </div>
-                        <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px]">ENFORCED</span>
+                        <span className="px-2.5 py-1 rounded-full bg-[#f5efe8] text-[#6e533c] border border-[#d6c2b0] font-bold text-[10px]">ENFORCED</span>
                       </div>
 
-                      <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="flex items-center justify-between p-4 bg-[#f4f4f2] border border-[#e2dfd9] rounded-xl">
                         <div>
-                          <p className="font-bold text-slate-900 text-xs">Data Retention & PII Scrubbing</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Automated redaction of sensitive customer info in training datasets</p>
+                          <p className="font-bold text-[#262523] text-xs">Data Retention & PII Scrubbing</p>
+                          <p className="text-[11px] text-[#5c5954] mt-0.5">Automated redaction of sensitive customer info in training datasets</p>
                         </div>
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">COMPLIANT</span>
+                        <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold text-[10px]">COMPLIANT</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-                  <h3 className="font-bold text-slate-900 text-sm">Recent AI Decisions Log</h3>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-4">
+                  <h3 className="font-bold text-[#262523] text-sm">Recent AI Decisions Log</h3>
+                  <div className="border border-[#e2dfd9] rounded-xl overflow-hidden">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200">
+                      <thead className="bg-[#f4f4f2] border-b border-[#e2dfd9]">
                         <tr>
-                          <th className="px-4 py-3 font-semibold text-slate-500">TICKET ID</th>
-                          <th className="px-4 py-3 font-semibold text-slate-500">AI ASSESSMENT</th>
-                          <th className="px-4 py-3 font-semibold text-slate-500">CONFIDENCE</th>
-                          <th className="px-4 py-3 font-semibold text-slate-500">REASONING AUDIT</th>
+                          <th className="px-4 py-3 font-semibold text-[#5c5954]">TICKET ID</th>
+                          <th className="px-4 py-3 font-semibold text-[#5c5954]">AI ASSESSMENT</th>
+                          <th className="px-4 py-3 font-semibold text-[#5c5954]">CONFIDENCE</th>
+                          <th className="px-4 py-3 font-semibold text-[#5c5954]">REASONING AUDIT</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-[#ebe9e4]">
                         {tickets.slice(0, 5).map((t) => (
-                          <tr key={t.id} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-3 font-mono font-semibold text-slate-800">{t.id}</td>
+                          <tr key={t.id} className="hover:bg-[#f4f4f2]/50">
+                            <td className="px-4 py-3 font-mono font-semibold text-[#262523]">{t.id}</td>
                             <td className="px-4 py-3">
-                              <span className="capitalize font-medium text-slate-700">{t.ai_suggested_priority || t.priority}</span>
+                              <span className="capitalize font-medium text-[#5c5954]">{t.ai_suggested_priority || t.priority}</span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`font-mono ${(t.ai_confidence || 0) > 0.8 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              <span className={`font-mono font-semibold tabular-nums ${(t.ai_confidence || 0) > 0.8 ? 'text-[#2f6b45]' : 'text-[#6e533c]'}`}>
                                 {Math.round((t.ai_confidence || 0) * 100)}%
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-slate-500 truncate max-w-[300px]">
+                            <td className="px-4 py-3 text-[#5c5954] truncate max-w-[300px]">
                               {t.ai_reasoning || 'Standard categorization'}
                             </td>
                           </tr>
@@ -1181,156 +1168,143 @@ export const AdminControlCenter: React.FC = () => {
                     </table>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* AUDIT LOG / EMAIL OUTBOX TAB */}
             {activeNav === 'audit' && (
-              <motion.div
-                key="audit"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-extrabold text-slate-900">Email Outbox & Delivery Logs</h2>
-                    <p className="text-xs text-slate-500">Live dispatch log of verification codes, ticket alerts, and admin notices</p>
+                    <h2 className="text-xl font-bold text-[#262523]">Email Outbox & Delivery Logs</h2>
+                    <p className="text-xs text-[#5c5954]">Live dispatch log of verification codes, ticket alerts, and admin notices</p>
                   </div>
                   <button
                     onClick={() => setIsOutboxOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-slate-900 text-xs font-bold shadow-xs cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white text-xs font-semibold cursor-pointer calm-btn"
                   >
                     <ExternalLink className="size-3.5" />
                     <span>Open Full Viewer</span>
                   </button>
                 </div>
 
-                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden divide-y divide-slate-100">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl overflow-hidden divide-y divide-[#ebe9e4]">
                   {outbox.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-slate-500">No email records in outbox yet.</div>
+                    <div className="p-8 text-center text-xs text-[#8c8881]">No email records in outbox yet.</div>
                   ) : (
                     outbox.map((mail) => (
-                      <div key={mail.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50 transition-colors">
+                      <div key={mail.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-[#f4f4f2]/50 transition-colors">
                         <div>
-                          <p className="font-bold text-slate-900 text-xs">{mail.subject}</p>
-                          <p className="text-[11px] text-slate-500 font-mono">
+                          <p className="font-bold text-[#262523] text-xs">{mail.subject}</p>
+                          <p className="text-[11px] text-[#8c8881] font-mono">
                             To: {mail.to} · {new Date(mail.created_at).toLocaleString()}
                           </p>
                           {mail.payload && (
-                            <p className="text-[11px] text-slate-600 mt-1 font-mono bg-slate-50 p-2 rounded border border-slate-200/70 line-clamp-2">
+                            <p className="text-[11px] text-[#5c5954] mt-1 font-mono bg-[#f4f4f2] p-2 rounded border border-[#e2dfd9] line-clamp-2">
                               {mail.payload}
                             </p>
                           )}
                         </div>
-                        <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-[10px] self-start sm:self-auto">
+                        <span className="rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold px-2.5 py-0.5 text-[10px] self-start sm:self-auto">
                           SENT
                         </span>
                       </div>
                     ))
                   )}
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* REPORTS TAB */}
             {activeNav === 'reports' && (
-              <motion.div
-                key="reports"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
-                  <h2 className="text-xl font-extrabold text-slate-900">Enterprise Reports & SLA Insights</h2>
-                  <p className="text-xs text-slate-600">Export audit-ready CSV records of all resolved tickets, SLA compliance, and user roles.</p>
+              <div className="space-y-4">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-3">
+                  <h2 className="text-xl font-bold text-[#262523]">Enterprise Reports & SLA Insights</h2>
+                  <p className="text-xs text-[#5c5954]">Export audit-ready CSV records of all resolved tickets, SLA compliance, and user roles.</p>
                   <button
                     onClick={handleExportCSV}
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 text-slate-900 px-4 py-2 text-xs font-bold cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white px-4 py-2.5 text-xs font-semibold cursor-pointer calm-btn"
                   >
                     <Download className="size-4" /> Download Complete Report
                   </button>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* SETTINGS TAB */}
             {activeNav === 'settings' && (
-              <motion.div
-                key="settings"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
-                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-                  <h2 className="text-xl font-extrabold text-slate-900">System Security & Access Settings</h2>
-                  <div className="space-y-3 text-xs text-slate-700">
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div className="space-y-4">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-4">
+                  <h2 className="text-xl font-bold text-[#262523]">System Security & Access Settings</h2>
+                  <div className="space-y-3 text-xs text-[#5c5954]">
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900">Mandatory Administrator Approval</p>
-                        <p className="text-slate-500">Require administrator confirmation before new users can log in</p>
+                        <p className="font-bold text-[#262523]">Mandatory Administrator Approval</p>
+                        <p className="text-[#5c5954]">Require administrator confirmation before new users can log in</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                      <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold text-[10px]">
                         ENFORCED
                       </span>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900">Mandatory Email Verification</p>
-                        <p className="text-slate-500">Require 6-digit confirmation code on all user registrations</p>
+                        <p className="font-bold text-[#262523]">Mandatory Email Verification</p>
+                        <p className="text-[#5c5954]">Require 6-digit confirmation code on all user registrations</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                      <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold text-[10px]">
                         ENFORCED
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white border border-red-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-                  <h2 className="text-xl font-extrabold text-red-600">Danger Zone</h2>
-                  <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-4">
+                  <h2 className="text-base font-bold text-[#262523]">Database Maintenance</h2>
+                  <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <p className="font-bold text-red-900">Clear Database</p>
-                      <p className="text-red-700 text-xs">Permanently delete all users, tickets, and messages.</p>
+                      <p className="font-bold text-[#262523] text-xs">Clear Database Records</p>
+                      <p className="text-[#5c5954] text-xs mt-0.5">Permanently remove all non-admin users, tickets, and messages.</p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        const code = prompt('Type "DELETE" to confirm clearing the entire database:');
-                        if (code === 'DELETE') {
-                          purgeAllData();
-                        }
-                      }}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors"
-                    >
-                      Clear Database
-                    </button>
+                    {confirmPurge ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            purgeAllData();
+                            setConfirmPurge(false);
+                          }}
+                          className="px-3.5 py-2 bg-[#6e533c] hover:bg-[#59422f] text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Confirm Clear All
+                        </button>
+                        <button
+                          onClick={() => setConfirmPurge(false)}
+                          className="px-3.5 py-2 bg-white border border-[#e2dfd9] text-[#5c5954] hover:text-[#262523] rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmPurge(true)}
+                        className="px-4 py-2 bg-white hover:bg-[#ebe9e4] text-[#5c5954] hover:text-[#262523] border border-[#d5d1c8] rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Clear Database
+                      </button>
+                    )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* INTEGRATIONS & API KEYS TABS */}
             {(activeNav === 'integrations' || activeNav === 'api') && (
-              <motion.div
-                key="other"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs"
-              >
-                <h2 className="text-xl font-extrabold text-slate-900 capitalize">{activeNav}</h2>
-                <p className="text-xs text-slate-500 mt-1">Managed integration endpoints and active webhook secrets.</p>
-              </motion.div>
+              <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6">
+                <h2 className="text-xl font-bold text-[#262523] capitalize">{activeNav}</h2>
+                <p className="text-xs text-[#5c5954] mt-1">Managed integration endpoints and active webhook secrets.</p>
+              </div>
             )}
-          </AnimatePresence>
+          </div>
         </main>
       </div>
 

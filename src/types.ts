@@ -14,6 +14,7 @@ export interface UserProfile {
   created_at: string;
   avatar_url?: string;
   phone?: string;
+  role_assigned_by_admin?: boolean;
 }
 
 export interface AppNotification {

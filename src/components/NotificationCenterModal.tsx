@@ -3,20 +3,15 @@ import { useApp } from '../context/AppContext';
 import { AppNotification } from '../types';
 import {
   Bell,
-  CheckCircle2,
-  Clock,
   Inbox,
   Mail,
   ShieldCheck,
   Ticket as TicketIcon,
-  Trash2,
   X,
   Volume2,
-  ExternalLink,
   MessageSquare,
   Sparkles,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface NotificationCenterModalProps {
   isOpen: boolean;
@@ -65,45 +60,40 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   const getIconForType = (type: AppNotification['type']) => {
     switch (type) {
       case 'ticket':
-        return <TicketIcon className="size-4 text-cyan-400" />;
+        return <TicketIcon className="size-4 text-[#8c6d53]" />;
       case 'message':
-        return <MessageSquare className="size-4 text-blue-400" />;
+        return <MessageSquare className="size-4 text-[#8c6d53]" />;
       case 'approval':
-        return <ShieldCheck className="size-4 text-purple-400" />;
+        return <ShieldCheck className="size-4 text-[#2f6b45]" />;
       case 'verification':
-        return <Mail className="size-4 text-amber-400" />;
+        return <Mail className="size-4 text-[#6e533c]" />;
       default:
-        return <Sparkles className="size-4 text-emerald-400" />;
+        return <Sparkles className="size-4 text-[#8c6d53]" />;
     }
   };
 
   return (
     <div
       id="notification-center-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
     >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-slate-700/80 bg-[#09172e] shadow-2xl overflow-hidden text-slate-100 font-sans"
-      >
+      <div className="calm-fade-slide w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-[#e2dfd9] bg-white shadow-xl overflow-hidden text-[#262523] font-sans">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-[#060f1e]/80">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e2dfd9] bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 grid place-items-center">
+            <div className="size-8 rounded-xl bg-[#f5efe8] text-[#8c6d53] border border-[#d6c2b0] grid place-items-center">
               <Bell className="size-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm text-white">Notifications & Alerts</h3>
+                <h3 className="font-bold text-sm text-[#262523]">Notifications & Alerts</h3>
                 {unreadNotificationsCount > 0 && (
-                  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-cyan-500 text-slate-950">
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#8c6d53] text-white tabular-nums">
                     {unreadNotificationsCount} new
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400">Real-time system events and alerts</p>
+              <p className="text-[11px] text-[#5c5954]">Real-time system events and alerts</p>
             </div>
           </div>
 
@@ -111,13 +101,13 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             <button
               onClick={playNotificationSound}
               title="Test Sound Chime"
-              className="p-2 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-all cursor-pointer"
+              className="p-2 rounded-lg text-[#8c8881] hover:text-[#262523] hover:bg-[#f4f4f2] transition-all cursor-pointer"
             >
               <Volume2 className="size-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+              className="p-2 rounded-lg text-[#8c8881] hover:text-[#262523] hover:bg-[#f4f4f2] transition-all cursor-pointer"
             >
               <X className="size-4" />
             </button>
@@ -125,7 +115,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center justify-between px-5 py-2.5 bg-[#071326] border-b border-slate-800/80 text-xs">
+        <div className="flex items-center justify-between px-5 py-2.5 bg-[#f4f4f2] border-b border-[#e2dfd9] text-xs">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
             {(['all', 'unread', 'ticket', 'approval', 'system'] as const).map((tab) => (
               <button
@@ -133,8 +123,8 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 onClick={() => setActiveTab(tab)}
                 className={`px-2.5 py-1 rounded-lg font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
                   activeTab === tab
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#8c6d53] text-white'
+                    : 'text-[#5c5954] hover:text-[#262523] hover:bg-white'
                 }`}
               >
                 {tab}
@@ -145,7 +135,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           {unreadNotificationsCount > 0 && (
             <button
               onClick={() => markAllNotificationsAsRead()}
-              className="text-[11px] text-cyan-400 hover:underline font-semibold whitespace-nowrap ml-2 cursor-pointer"
+              className="text-[11px] text-[#8c6d53] hover:underline font-semibold whitespace-nowrap ml-2 cursor-pointer"
             >
               Mark all read
             </button>
@@ -153,13 +143,13 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         </div>
 
         {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 p-2">
+        <div className="flex-1 overflow-y-auto divide-y divide-[#ebe9e4] p-2 bg-white">
           {filtered.length === 0 ? (
             <div className="py-12 px-4 text-center space-y-2">
-              <Inbox className="size-8 text-slate-600 mx-auto" />
-              <p className="text-sm font-semibold text-slate-300">No notifications in this view</p>
-              <p className="text-xs text-slate-500">
-                You are all caught up! New alerts will trigger real-time banners and chimes.
+              <Inbox className="size-8 text-[#8c8881] mx-auto" />
+              <p className="text-sm font-semibold text-[#262523]">No notifications in this view</p>
+              <p className="text-xs text-[#5c5954]">
+                You are all caught up. New alerts will appear here automatically.
               </p>
             </div>
           ) : (
@@ -169,31 +159,37 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 onClick={() => handleNotificationClick(notif)}
                 className={`p-3.5 mb-1 rounded-xl transition-all cursor-pointer flex items-start gap-3 ${
                   notif.read
-                    ? 'hover:bg-slate-800/40 opacity-70 border border-transparent'
-                    : 'bg-slate-800/50 border border-slate-700 hover:bg-slate-700/50 shadow-sm'
+                    ? 'hover:bg-[#f4f4f2] opacity-80 border border-transparent'
+                    : 'bg-[#f5efe8]/60 border border-[#d6c2b0] hover:bg-[#f5efe8]'
                 }`}
               >
-                <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 border ${
-                  notif.read ? 'bg-slate-800/80 border-slate-700/50' : 'bg-slate-700/50 border-slate-600/50'
-                }`}>
+                <div
+                  className={`size-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 border ${
+                    notif.read
+                      ? 'bg-[#f4f4f2] border-[#e2dfd9]'
+                      : 'bg-white border-[#d6c2b0]'
+                  }`}
+                >
                   {getIconForType(notif.type)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className={`text-sm font-bold truncate ${notif.read ? 'text-slate-300' : 'text-white'}`}>{notif.title}</h4>
-                    <span className={`text-[10px] whitespace-nowrap ${notif.read ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <h4 className={`text-sm font-bold truncate ${notif.read ? 'text-[#5c5954]' : 'text-[#262523]'}`}>
+                      {notif.title}
+                    </h4>
+                    <span className="text-[10px] whitespace-nowrap text-[#8c8881] tabular-nums">
                       {new Date(notif.created_at).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
                     </span>
                   </div>
-                  <p className={`text-xs mt-1 leading-relaxed ${notif.read ? 'text-slate-400' : 'text-slate-200'}`}>{notif.message}</p>
+                  <p className="text-xs mt-1 leading-relaxed text-[#5c5954]">{notif.message}</p>
                 </div>
 
                 {!notif.read && (
-                  <span className="size-2.5 rounded-full bg-cyan-400 shrink-0 mt-1.5 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                  <span className="size-2 rounded-full bg-[#8c6d53] shrink-0 mt-1.5" />
                 )}
               </div>
             ))
@@ -201,16 +197,16 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-800 bg-[#060f1e] flex items-center justify-between text-[11px] text-slate-400">
+        <div className="px-5 py-3 border-t border-[#e2dfd9] bg-[#f4f4f2] flex items-center justify-between text-[11px] text-[#5c5954]">
           <span>Real-time Firestore alerts active</span>
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-[#ebe9e4] border border-[#e2dfd9] text-[#262523] font-semibold cursor-pointer"
           >
             Close
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

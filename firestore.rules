@@ -12,23 +12,23 @@ service cloud.firestore {
     
     function isDesignatedAdmin() {
       return isSignedIn() && request.auth.token.email != null && (
-        request.auth.token.email.lower() == 'tatiavumile@gmail.com' ||
-        request.auth.token.email.lower() == 'avutati@gmail.com' ||
-        request.auth.token.email.lower() == 'philibaneawonke@gmail.com' ||
-        request.auth.token.email.lower() == 'maladze.mugeri@capaciti.org.za' ||
-        request.auth.token.email.lower() == 'emihle.tom@capaciti.org.za' ||
-        request.auth.token.email.lower() == 'malhilhibonani02@gmail.com'
+        request.auth.token.email.lower() == 'philibaneawonke@gmail.com'
       );
     }
 
-    // RBAC: Roles are stored in /users/{userId}
+    // RBAC: Roles are strictly stored in /users/{userId}
     function getRole() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') 
         : 'user';
     }
     function isAdmin() {
-      return isSignedIn() && (isDesignatedAdmin() || getRole() == 'admin');
+      return isSignedIn() && (
+        isDesignatedAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getRole() == 'admin' &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role_assigned_by_admin', false) == true)
+      );
     }
     function isTechnician() {
       return isSignedIn() && (isAdmin() || getRole() == 'technician');
@@ -49,6 +49,7 @@ service cloud.firestore {
         && (!data.keys().hasAny(['phone']) || (data.phone is string && data.phone.size() <= 32))
         && (!data.keys().hasAny(['verification_code']) || (data.verification_code is string && data.verification_code.size() <= 64))
         && (!data.keys().hasAny(['rejected']) || data.rejected is bool)
+        && (!data.keys().hasAny(['role_assigned_by_admin']) || data.role_assigned_by_admin is bool)
         && (!data.keys().hasAny(['company']) || (data.company is string && data.company.size() <= 128));
     }
     
@@ -120,8 +121,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isSignedIn() && isValidId(userId);
-      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(userId) && (isAdmin() || isTechnician() || userId == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || isTechnician());
       
       allow create: if isSignedIn() 
         && isValidId(userId) 
@@ -129,7 +130,7 @@ service cloud.firestore {
         && userId == request.auth.uid
         && (
           isDesignatedAdmin() || 
-          (incoming().role == 'user' || incoming().role == 'admin') // Allow admin because First User needs it
+          incoming().role == 'user'
         );
         
       allow update: if isSignedIn() 
@@ -138,7 +139,7 @@ service cloud.firestore {
         && incoming().id == existing().id
         && (
           isAdmin() || 
-          (userId == request.auth.uid && incoming().role == existing().role && incoming().banned == existing().banned && incoming().is_approved == existing().is_approved)
+          (userId == request.auth.uid && (incoming().role == existing().role || incoming().role == 'user') && incoming().banned == existing().banned && incoming().is_approved == existing().is_approved)
         );
         
       allow delete: if isAdmin();

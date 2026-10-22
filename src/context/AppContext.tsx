@@ -17,6 +17,7 @@ import {
 import {
   initializeFirestoreDatabase,
   getUsersCountFromFirestore,
+  getUserFromFirestore,
   subscribeToTickets,
   subscribeToMessages,
   subscribeToUsers,
@@ -75,6 +76,12 @@ interface AppContextType {
     userId: string,
     updates: { is_approved?: boolean; banned?: boolean; rejected?: boolean }
   ) => Promise<void>;
+  updateCurrentUserProfile: (updates: {
+    full_name?: string;
+    email?: string;
+    company?: string;
+    phone?: string;
+  }) => Promise<boolean>;
   deleteUser: (userId: string) => Promise<void>;
   verifyEmail: (code: string) => Promise<boolean>;
   resendVerificationEmail: () => Promise<void>;
@@ -147,18 +154,26 @@ const playChimeSound = () => {
   }
 };
 
-// Designated Administrator Email from workspace
-export const DESIGNATED_ADMIN_EMAILS = [
-  'tatiavumile@gmail.com',
-  'avutati@gmail.com',
-  'philibaneawonke@gmail.com',
-  'maladze.mugeri@capaciti.org.za',
-  'emihle.tom@capaciti.org.za',
-  'malhilhibonani02@gmail.com',
-];
+// Only the designated system administrator email (philibaneawonke@gmail.com) is auto-admin by default;
+// any other account that was previously auto-promoted without explicit admin assignment is repaired to 'user'.
+export const DESIGNATED_ADMIN_EMAILS = ['philibaneawonke@gmail.com'];
 export const isDesignatedAdminEmail = (email?: string | null): boolean => {
   if (!email) return false;
   return DESIGNATED_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+};
+
+export const resolveAuthoritativeRole = (user: UserProfile): UserRole => {
+  if (isDesignatedAdminEmail(user.email)) {
+    return 'admin';
+  }
+  if (user.role === 'admin') {
+    // Only allow 'admin' for non-designated emails if an Admin explicitly assigned it
+    return user.role_assigned_by_admin === true ? 'admin' : 'user';
+  }
+  if (user.role === 'technician') {
+    return 'technician';
+  }
+  return 'user';
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -178,8 +193,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [viewRole, setViewRoleState] = useState<UserRole>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.VIEW_ROLE);
-    return (saved as UserRole) || currentUser?.role || 'admin';
+    if (!currentUser || currentUser.role === 'user') {
+      return 'user';
+    }
+    if (currentUser.role === 'technician') {
+      return 'technician';
+    }
+    const saved = localStorage.getItem(STORAGE_KEYS.VIEW_ROLE) as UserRole | null;
+    return saved || 'admin';
   });
 
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>(() => {
@@ -222,34 +243,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (fbUser) {
         const uid = fbUser.uid;
         const email = fbUser.email || '';
-        const isDesignated = isDesignatedAdminEmail(email);
 
-        const count = await getUsersCountFromFirestore();
-        const isFirstUser = count === 0;
-        const assignedRole: UserRole = (isFirstUser || isDesignated) ? 'admin' : 'user';
+        // Always fetch the authoritative user profile directly from Firestore first
+        const firestoreProfile = await getUserFromFirestore(uid);
+        const matched =
+          firestoreProfile ||
+          users.find((u) => u.id === uid || (email && u.email.toLowerCase() === email.toLowerCase()));
 
-        // Check if user already exists
-        const matched = users.find((u) => u.id === uid || (email && u.email.toLowerCase() === email.toLowerCase()));
         if (matched) {
+          const authoritativeRole = resolveAuthoritativeRole(matched);
+          const isDesig = isDesignatedAdminEmail(email);
           const userWithUid: UserProfile = {
             ...matched,
             id: uid,
-            role: (isDesignated || matched.role === 'admin') ? 'admin' : matched.role,
-            is_approved: isDesignated ? true : matched.is_approved,
+            role: authoritativeRole,
+            is_approved: isDesig ? true : matched.is_approved,
             email_verified: true,
           };
           setCurrentUser(userWithUid);
-          setUsers((prev) => prev.map((u) => (u.id === matched.id || u.id === uid) ? userWithUid : u));
+          setUsers((prev) => {
+            const exists = prev.some((u) => u.id === matched.id || u.id === uid);
+            return exists
+              ? prev.map((u) => (u.id === matched.id || u.id === uid ? userWithUid : u))
+              : [...prev, userWithUid];
+          });
           localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, uid);
-          await saveUserToFirestore(userWithUid);
+          if (authoritativeRole !== 'admin') {
+            setViewRoleState(authoritativeRole);
+            localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, authoritativeRole);
+          } else if (matched.role !== 'admin') {
+            setViewRoleState('admin');
+            localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, 'admin');
+          }
+          // Persist repaired role back to Firestore if needed
+          if (matched.role !== authoritativeRole || (isDesig && !matched.is_approved)) {
+            await saveUserToFirestore(userWithUid);
+          }
         } else {
+          const isDesig = isDesignatedAdminEmail(email);
+          const assignedRole: UserRole = isDesig ? 'admin' : 'user';
+
           const newUser: UserProfile = {
             id: uid,
             email: email,
             full_name: fbUser.displayName || (email ? email.split('@')[0] : 'User'),
-            company: isDesignated ? 'TechnoResolve IT Administration' : 'Enterprise Support',
+            company: isDesig ? 'TechnoResolve IT Administration' : 'Enterprise Support',
             role: assignedRole,
-            is_approved: isFirstUser || isDesignated,
+            is_approved: isDesig,
             email_verified: true,
             banned: false,
             created_at: new Date().toISOString(),
@@ -257,6 +297,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCurrentUser(newUser);
           setUsers((prev) => [...prev.filter((u) => u.id !== uid), newUser]);
           localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, uid);
+          setViewRoleState(assignedRole);
+          localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, assignedRole);
           await saveUserToFirestore(newUser);
         }
       }
@@ -270,31 +312,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setMessages(realMessages || []);
     });
 
-    const unsubUsers = subscribeToUsers(currentUser?.id, (realUsers) => {
-      setUsers(realUsers || []);
-      const savedId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID);
-      if (savedId) {
-        const matched = (realUsers || []).find((u) => u.id === savedId);
-        if (matched) {
-          // If this is the designated admin and it's the currently authenticated user, ensure admin role
-          if (isDesignatedAdminEmail(matched.email) && matched.role !== 'admin' && auth.currentUser?.uid === matched.id) {
-            const upgradedAdmin: UserProfile = {
+    const unsubUsers = subscribeToUsers(
+      currentUser?.id,
+      (realUsers) => {
+        const normalizedUsers = (realUsers || []).map((u) => ({
+          ...u,
+          role: resolveAuthoritativeRole(u),
+        }));
+        setUsers(normalizedUsers);
+        const savedId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID);
+        if (savedId) {
+          const matched = (realUsers || []).find((u) => u.id === savedId);
+          if (matched) {
+            const authoritativeRole = resolveAuthoritativeRole(matched);
+            const syncedUser: UserProfile = {
               ...matched,
-              role: 'admin',
-              is_approved: true,
-              email_verified: true,
+              role: authoritativeRole,
             };
-            setCurrentUser(upgradedAdmin);
-          } else {
-            setCurrentUser(matched);
-          }
-          // If role changed externally or user is not admin, keep viewRole aligned
-          if (matched.role !== 'admin' && viewRole !== matched.role) {
-            setViewRoleState(matched.role);
+            setCurrentUser(syncedUser);
+            // Strictly lock non-admin users to their own portal role
+            if (authoritativeRole !== 'admin') {
+              setViewRoleState(authoritativeRole);
+              localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, authoritativeRole);
+            }
+            if (matched.role !== authoritativeRole && auth.currentUser?.uid === matched.id) {
+              updateUserInFirestore(matched.id, { role: authoritativeRole });
+            }
           }
         }
-      }
-    });
+      },
+      currentUser?.role
+    );
 
     const unsubOutbox = subscribeToOutbox(currentUser?.role, (realOutbox) => {
       setOutbox(realOutbox || []);
@@ -326,6 +374,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEYS.UNREAD, JSON.stringify(unreadCounts));
   }, [unreadCounts]);
 
+  // Continuous enforcement: Customers ('user') are strictly locked to 'user' viewRole;
+  // Technicians ('technician') are strictly locked to 'technician' viewRole.
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'user') {
+      if (viewRole !== 'user') {
+        setViewRoleState('user');
+        localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, 'user');
+      }
+    } else if (currentUser.role === 'technician') {
+      if (viewRole !== 'technician') {
+        setViewRoleState('technician');
+        localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, 'technician');
+      }
+    }
+  }, [currentUser, viewRole]);
+
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
     setNotificationToast((prev) => (prev?.id === id ? null : prev));
@@ -351,37 +415,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     playChimeSound();
   }, []);
 
-  // Role-based access control: Only Admin can switch to any workspace; Technicians can access Tech + Customer; Users can only access Customer.
+  // Strict role-based portal isolation: Only Admins have access to switch across all portals.
+  // Technicians are strictly locked to Technician Workspace ('technician'), and Customers are strictly locked to Customer Portal ('user').
   const setViewRole = (role: UserRole) => {
-    if (!currentUser) {
-      setViewRoleState(role);
-      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, role);
-      return;
-    }
-
-    if (currentUser.role === 'admin') {
-      // Admin has full cross-workspace access
-      setViewRoleState(role);
-      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, role);
-      const roleName = role === 'admin' ? 'Administrator' : role === 'technician' ? 'Technician' : 'Customer';
-      showToast(`Admin view context switched to ${roleName}`, 'info');
+    if (!currentUser || currentUser.role === 'user') {
+      setViewRoleState('user');
+      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, 'user');
       return;
     }
 
     if (currentUser.role === 'technician') {
-      if (role === 'admin') {
-        showToast('🔒 Access Denied: Administrator privileges required to access the Admin Control Center.', 'error');
-        return;
-      }
-      setViewRoleState(role);
-      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, role);
-      showToast(`Switched to ${role === 'technician' ? 'Technician Workspace' : 'Customer Portal'}`, 'info');
+      setViewRoleState('technician');
+      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, 'technician');
       return;
     }
 
-    // Standard User / Customer
-    if (role !== 'user') {
-      showToast(`🔒 Access Denied: ${role === 'admin' ? 'Administrator' : 'Technician'} role required to access this workspace.`, 'error');
+    if (currentUser.role === 'admin') {
+      setViewRoleState(role);
+      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, role);
+      const roleName = role === 'admin' ? 'Administrator' : role === 'technician' ? 'Technician' : 'Customer';
+      showToast(`Admin view context switched to ${roleName}`, 'info');
       return;
     }
 
@@ -704,16 +757,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUserRole = async (userId: string, role: UserRole) => {
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role } : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, role, role_assigned_by_admin: true } : u))
+    );
     try {
-      await updateUserInFirestore(userId, { role });
+      await updateUserInFirestore(userId, { role, role_assigned_by_admin: true });
     } catch (err) {
       console.warn('Could not update role in Firestore:', err);
     }
 
     if (currentUser?.id === userId) {
-      setCurrentUser((prev) => (prev ? { ...prev, role } : null));
+      setCurrentUser((prev) => (prev ? { ...prev, role, role_assigned_by_admin: true } : null));
       setViewRoleState(role);
+      localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, role);
     }
 
     const notif: AppNotification = {
@@ -729,6 +785,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveNotificationToFirestore(notif);
 
     showToast(`User role updated to ${role.toUpperCase()}`, 'info');
+  };
+
+  const updateCurrentUserProfile = async (updates: {
+    full_name?: string;
+    email?: string;
+    company?: string;
+    phone?: string;
+  }): Promise<boolean> => {
+    if (!currentUser) {
+      showToast('Please sign in to update your account profile.', 'error');
+      return false;
+    }
+
+    const updatedProfile: UserProfile = {
+      ...currentUser,
+      full_name: updates.full_name !== undefined ? updates.full_name.trim() : currentUser.full_name,
+      email: updates.email !== undefined ? updates.email.trim() : currentUser.email,
+      company: updates.company !== undefined ? updates.company.trim() : currentUser.company,
+      phone: updates.phone !== undefined ? updates.phone.trim() : currentUser.phone,
+    };
+
+    setCurrentUser(updatedProfile);
+    setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedProfile : u)));
+
+    try {
+      await saveUserToFirestore(updatedProfile);
+      showToast('Account profile updated successfully.', 'success');
+      return true;
+    } catch (err) {
+      console.warn('Error saving profile update to Firestore:', err);
+      showToast('Failed to save profile changes.', 'error');
+      return false;
+    }
   };
 
   const updateUserStatus = async (
@@ -815,6 +904,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       is_approved: true,
       rejected: false,
       role: role || 'user',
+      role_assigned_by_admin: true,
     };
     await updateUserStatus(userId, updates);
   };
@@ -850,31 +940,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    const isDesignated = isDesignatedAdminEmail(email);
-
     try {
       const fbCredential = await signInWithEmailAndPassword(auth, email, password);
       const uid = fbCredential.user.uid;
-      
-      let existing = users.find((u) => u.id === uid || u.email.toLowerCase() === email.toLowerCase());
-      
+
+      // Always fetch the authoritative profile from Firestore first
+      const firestoreProfile = await getUserFromFirestore(uid);
+      let existing =
+        firestoreProfile ||
+        users.find((u) => u.id === uid || u.email.toLowerCase() === email.toLowerCase());
+
       if (!existing) {
-        // User exists in Firebase Auth but not in Firestore (e.g. after DB wipe)
-        const count = await getUsersCountFromFirestore();
-        const isFirstUser = count === 0;
-        
+        const isDesig = isDesignatedAdminEmail(email);
         existing = {
           id: uid,
           email: email,
           full_name: email.split('@')[0],
-          role: isFirstUser ? 'admin' : 'user',
-          is_approved: isFirstUser,
+          role: isDesig ? 'admin' : 'user',
+          is_approved: isDesig,
           email_verified: true,
           banned: false,
           created_at: new Date().toISOString(),
         };
         setUsers((prev) => [...prev, existing!]);
-        saveUserToFirestore(existing);
+        await saveUserToFirestore(existing);
       }
 
       if (existing) {
@@ -883,24 +972,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return false;
         }
 
-        // If designated admin, ensure admin role and full approval
+        const authoritativeRole = resolveAuthoritativeRole(existing);
+
         const userProfile: UserProfile = {
           ...existing,
           id: uid,
-          role: (isDesignated || existing.role === 'admin') ? 'admin' : existing.role,
-          is_approved: isDesignated ? true : existing.is_approved,
+          role: authoritativeRole,
+          is_approved: isDesignatedAdminEmail(email) ? true : existing.is_approved,
           email_verified: true,
         };
-        setUsers((prev) => prev.map((u) => (u.id === existing!.id || u.id === uid) ? userProfile : u));
+        setUsers((prev) => {
+          const hasUser = prev.some((u) => u.id === existing!.id || u.id === uid);
+          return hasUser
+            ? prev.map((u) => (u.id === existing!.id || u.id === uid ? userProfile : u))
+            : [...prev, userProfile];
+        });
         await saveUserToFirestore(userProfile);
-        
+
         setCurrentUser(userProfile);
         localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, uid);
         setViewRoleState(userProfile.role);
         localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, userProfile.role);
         setActivePage('dashboard');
-        
-        showToast(`Welcome back, ${userProfile.full_name}! (${userProfile.role.toUpperCase()})`, 'success');
+
+        showToast(`Welcome back, ${userProfile.full_name}!`, 'success');
         return true;
       } else {
         showToast('Invalid login credentials or account not registered.', 'error');
@@ -930,25 +1025,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const email = fbUser.email;
-      const displayName = fbUser.displayName || (isDesignatedAdminEmail(email) ? 'Philibane Awonke' : email.split('@')[0]);
+      const displayName = fbUser.displayName || email.split('@')[0];
       const photoURL = fbUser.photoURL || undefined;
-      const isDesignated = isDesignatedAdminEmail(email);
 
-      let existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase() || u.id === fbUser.uid);
+      const firestoreProfile = await getUserFromFirestore(fbUser.uid);
+      let existing =
+        firestoreProfile ||
+        users.find((u) => u.email.toLowerCase() === email.toLowerCase() || u.id === fbUser.uid);
+
       if (existing) {
         if (existing.banned) {
           showToast('This account has been suspended by an administrator.', 'error');
           return false;
         }
+        const authoritativeRole = resolveAuthoritativeRole(existing);
+
         const userProfile: UserProfile = {
           ...existing,
           id: fbUser.uid,
           avatar_url: photoURL || existing.avatar_url,
-          role: (isDesignated || existing.role === 'admin') ? 'admin' : existing.role,
-          is_approved: isDesignated ? true : existing.is_approved,
+          role: authoritativeRole,
+          is_approved: isDesignatedAdminEmail(email) ? true : existing.is_approved,
           email_verified: true,
         };
-        setUsers((prev) => prev.map((u) => (u.id === existing!.id || u.id === fbUser.uid) ? userProfile : u));
+        setUsers((prev) => {
+          const hasUser = prev.some((u) => u.id === existing!.id || u.id === fbUser.uid);
+          return hasUser
+            ? prev.map((u) => (u.id === existing!.id || u.id === fbUser.uid ? userProfile : u))
+            : [...prev, userProfile];
+        });
         await saveUserToFirestore(userProfile);
 
         setCurrentUser(userProfile);
@@ -956,14 +1061,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setViewRoleState(userProfile.role);
         localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, userProfile.role);
         setActivePage('dashboard');
-        
-        showToast(`Welcome back, ${userProfile.full_name}! (${userProfile.role.toUpperCase()})`, 'success');
+
+        showToast(`Welcome back, ${userProfile.full_name}!`, 'success');
         return true;
       }
 
-      const count = await getUsersCountFromFirestore();
-      const isFirstUser = count === 0;
-      const assignedRole: UserRole = (isFirstUser || isDesignated) ? 'admin' : 'user';
+      const isDesignated = isDesignatedAdminEmail(email);
+      const assignedRole: UserRole = isDesignated ? 'admin' : 'user';
 
       const newUser: UserProfile = {
         id: fbUser.uid,
@@ -971,7 +1075,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         full_name: displayName,
         company: isDesignated ? 'TechnoResolve IT Administration' : 'Google Workspace User',
         role: assignedRole,
-        is_approved: isFirstUser || isDesignated,
+        is_approved: isDesignated,
         email_verified: true,
         avatar_url: photoURL,
         banned: false,
@@ -981,7 +1085,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUsers((prev) => [...prev, newUser]);
       await saveUserToFirestore(newUser);
 
-      if (!isFirstUser && !isDesignated) {
+      if (!isDesignated) {
         const adminNotif: AppNotification = {
           id: `notif-${Date.now()}`,
           user_id: 'admin',
@@ -1003,8 +1107,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, assignedRole);
       setActivePage('dashboard');
 
-      if (isFirstUser || isDesignated) {
-        showToast('👑 Welcome! Granted full Administrator access.', 'success');
+      if (isDesignated) {
+        showToast('Welcome! Granted full Administrator access.', 'success');
       } else {
         showToast(`Welcome ${displayName}! Google authentication verified.`, 'success');
       }
@@ -1064,10 +1168,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false; // MUST fail early. Do NOT proceed to write to Firestore with a fake UID!
     }
 
-    const count = await getUsersCountFromFirestore();
-    const isFirstUser = count === 0;
-    const assignedRole: UserRole = (isFirstUser || isDesignated) ? 'admin' : (data.role || 'user');
-    const isAutoApproved = isFirstUser || isDesignated;
+    const assignedRole: UserRole = isDesignated ? 'admin' : 'user';
+    const isAutoApproved = isDesignated;
 
     const newUser: UserProfile = {
       id: uid,
@@ -1075,8 +1177,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       full_name: data.full_name,
       company: data.company || (isDesignated ? 'TechnoResolve IT Administration' : 'TechnoResolve Enterprise'),
       role: assignedRole,
-      is_approved: isAutoApproved, // First user or designated admin is automatically approved
-      email_verified: true, // No email verification required
+      is_approved: isAutoApproved,
+      email_verified: true,
       banned: false,
       created_at: new Date().toISOString(),
     };
@@ -1149,6 +1251,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendMessage,
         updateUserRole,
         updateUserStatus,
+        updateCurrentUserProfile,
         deleteUser,
         verifyEmail,
         resendVerificationEmail,
