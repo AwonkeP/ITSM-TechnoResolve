@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole, Ticket } from '../types';
-import { CATEGORIES, getCategoryLabel, formatStatus } from '../data/seedData';
+import { UserRole, Ticket, SecurityAuditCategory } from '../types';
+import { CATEGORIES, getCategoryLabel, formatStatus, evaluateTicketSLA } from '../data/seedData';
 import {
   ShieldCheck,
   BarChart3,
@@ -28,6 +28,8 @@ import {
   X,
   ArrowUpRight,
   ExternalLink,
+  RotateCcw,
+  Save,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -43,7 +45,7 @@ import {
 } from 'recharts';
 import { RoleSwitcher } from './RoleSwitcher';
 import { TicketChatModal } from './TicketChatModal';
-import { useAnimatedCounter, animateCalmFadeSlide } from '../utils/jsAnimations';
+import { useAnimatedCounter, animateCalmFadeSlide, triggerElementPop } from '../utils/jsAnimations';
 
 export const AdminControlCenter: React.FC = () => {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
@@ -65,10 +67,24 @@ export const AdminControlCenter: React.FC = () => {
     setIsOutboxOpen,
     setIsNotificationCenterOpen,
     purgeAllData,
+    auditLogs,
+    slaConfig,
+    updateSLAConfig,
+    resetSLAConfig,
   } = useApp();
 
   const [activeNav, setActiveNav] = useState<
-    'overview' | 'approvals' | 'users' | 'requests' | 'reports' | 'settings' | 'audit' | 'integrations' | 'api' | 'governance'
+    | 'overview'
+    | 'approvals'
+    | 'users'
+    | 'requests'
+    | 'reports'
+    | 'settings'
+    | 'security_audit'
+    | 'audit'
+    | 'integrations'
+    | 'api'
+    | 'governance'
   >('overview');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -86,6 +102,27 @@ export const AdminControlCenter: React.FC = () => {
 
   // User search
   const [userSearch, setUserSearch] = useState('');
+
+  // Security Audit Log filters
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditCategoryFilter, setAuditCategoryFilter] = useState<'all' | SecurityAuditCategory>('all');
+
+  // Custom SLA form state
+  const [slaForm, setSlaForm] = useState({
+    urgent: slaConfig.urgent,
+    high: slaConfig.high,
+    medium: slaConfig.medium,
+    low: slaConfig.low,
+  });
+
+  useEffect(() => {
+    setSlaForm({
+      urgent: slaConfig.urgent,
+      high: slaConfig.high,
+      medium: slaConfig.medium,
+      low: slaConfig.low,
+    });
+  }, [slaConfig]);
 
   // Modal for ticket view
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -213,27 +250,79 @@ export const AdminControlCenter: React.FC = () => {
     });
   }, [users, userSearch]);
 
+  // Filtered Audit Logs
+  const filteredAuditLogs = useMemo(() => {
+    return auditLogs.filter((entry) => {
+      if (auditCategoryFilter !== 'all' && entry.category !== auditCategoryFilter) {
+        return false;
+      }
+      if (auditSearch.trim()) {
+        const q = auditSearch.toLowerCase();
+        return (
+          entry.id.toLowerCase().includes(q) ||
+          entry.actor_name.toLowerCase().includes(q) ||
+          entry.actor_email.toLowerCase().includes(q) ||
+          entry.target_name.toLowerCase().includes(q) ||
+          entry.target_email.toLowerCase().includes(q) ||
+          entry.details.toLowerCase().includes(q) ||
+          entry.action.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [auditLogs, auditCategoryFilter, auditSearch]);
+
+  // SLA Compliance Metrics
+  const slaSummary = useMemo(() => {
+    if (tickets.length === 0) {
+      return { compliantCount: 0, atRiskCount: 0, breachedCount: 0, complianceRate: 100 };
+    }
+    let compliantCount = 0;
+    let atRiskCount = 0;
+    let breachedCount = 0;
+    tickets.forEach((t) => {
+      const ev = evaluateTicketSLA(t, slaConfig);
+      if (ev.status === 'met' || ev.status === 'on_track') {
+        compliantCount++;
+      } else if (ev.status === 'at_risk') {
+        atRiskCount++;
+      } else {
+        breachedCount++;
+      }
+    });
+    const complianceRate = Math.round(((compliantCount + atRiskCount) / tickets.length) * 100);
+    return { compliantCount, atRiskCount, breachedCount, complianceRate };
+  }, [tickets, slaConfig]);
+
+  const animAuditTotal = useAnimatedCounter(auditLogs.length);
+  const animRoleChanges = useAnimatedCounter(auditLogs.filter((a) => a.category === 'role').length);
+  const animApprovalActions = useAnimatedCounter(auditLogs.filter((a) => a.category === 'approval' || a.category === 'status').length);
+  const animPolicyChanges = useAnimatedCounter(auditLogs.filter((a) => a.category === 'policy' || a.category === 'profile').length);
+
   // Strict Component-Level Guard: Only Admins can ever render AdminControlCenter
   if (!currentUser || currentUser.role !== 'admin') {
     return null;
   }
 
-  // CSV Export
+  // CSV Export for Requests
   const handleExportCSV = () => {
-    const headers = ['ID,Title,Category,Priority,Status,Requester,Company,Created_At,AI_Confidence'];
-    const rows = tickets.map((t) =>
-      [
+    const headers = ['ID,Title,Category,Priority,Status,SLA_Target_Hours,SLA_Status,Requester,Company,Created_At,AI_Confidence'];
+    const rows = tickets.map((t) => {
+      const slaEv = evaluateTicketSLA(t, slaConfig);
+      return [
         t.id,
         `"${t.title.replace(/"/g, '""')}"`,
         t.category,
         t.priority,
         t.status,
+        slaEv.targetHours,
+        `"${slaEv.label}"`,
         `"${t.requester_name}"`,
         `"${t.company || ''}"`,
         t.created_at,
         t.ai_confidence || '0.94',
-      ].join(',')
-    );
+      ].join(',');
+    });
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -245,6 +334,48 @@ export const AdminControlCenter: React.FC = () => {
     document.body.removeChild(link);
 
     showToast('Report CSV exported successfully', 'success');
+  };
+
+  // CSV Export for Security Audit Log
+  const handleExportAuditCSV = (e?: React.MouseEvent<HTMLElement>) => {
+    if (e?.currentTarget) triggerElementPop(e.currentTarget);
+    const headers = ['Audit_ID,Action,Category,Actor_Name,Actor_Email,Target_Name,Target_Email,Previous_Value,New_Value,Details,Timestamp'];
+    const rows = filteredAuditLogs.map((entry) =>
+      [
+        entry.id,
+        entry.action,
+        entry.category,
+        `"${entry.actor_name.replace(/"/g, '""')}"`,
+        entry.actor_email,
+        `"${entry.target_name.replace(/"/g, '""')}"`,
+        entry.target_email,
+        `"${(entry.previous_value || '').replace(/"/g, '""')}"`,
+        `"${(entry.new_value || '').replace(/"/g, '""')}"`,
+        `"${entry.details.replace(/"/g, '""')}"`,
+        entry.created_at,
+      ].join(',')
+    );
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `technoresolve-security-audit-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('Security Audit Log exported to CSV', 'success');
+  };
+
+  const handleSaveSLATargets = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSLAConfig({
+      urgent: Number(slaForm.urgent) || 2,
+      high: Number(slaForm.high) || 4,
+      medium: Number(slaForm.medium) || 8,
+      low: Number(slaForm.low) || 24,
+    });
   };
 
   const navItems = [
@@ -260,14 +391,20 @@ export const AdminControlCenter: React.FC = () => {
         },
         { id: 'users' as const, label: 'Users & Roles', icon: Users },
         { id: 'requests' as const, label: 'All Requests', icon: Inbox },
-        { id: 'reports' as const, label: 'Reports', icon: TrendingUp },
-        { id: 'settings' as const, label: 'System Settings', icon: Settings },
+        { id: 'reports' as const, label: 'Reports & SLA', icon: TrendingUp },
+        { id: 'settings' as const, label: 'System & SLA Settings', icon: Settings },
       ],
     },
     {
       group: 'PLATFORM',
       items: [
-        { id: 'governance' as const, label: 'AI Governance', icon: ShieldCheck },
+        {
+          id: 'security_audit' as const,
+          label: 'Security Audit Log',
+          icon: ShieldCheck,
+          badge: auditLogs.length,
+        },
+        { id: 'governance' as const, label: 'AI Governance', icon: Cpu },
         { id: 'audit' as const, label: 'Email Outbox', icon: Mail, badge: outbox.length },
         { id: 'integrations' as const, label: 'Integrations', icon: Layers },
         { id: 'api' as const, label: 'API Keys', icon: Key },
@@ -1022,6 +1159,7 @@ export const AdminControlCenter: React.FC = () => {
                           <th className="px-5 py-3.5">Title</th>
                           <th className="px-5 py-3.5">Category</th>
                           <th className="px-5 py-3.5">Priority</th>
+                          <th className="px-5 py-3.5">SLA Target</th>
                           <th className="px-5 py-3.5">Status</th>
                           <th className="px-5 py-3.5">Requester</th>
                           <th className="px-5 py-3.5 text-right">Action</th>
@@ -1030,7 +1168,7 @@ export const AdminControlCenter: React.FC = () => {
                       <tbody className="divide-y divide-[#ebe9e4]">
                         {filteredTickets.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-5 py-12 text-center text-xs text-[#5c5954]">
+                            <td colSpan={8} className="px-5 py-12 text-center text-xs text-[#5c5954]">
                               <Inbox className="size-8 text-[#8c8881] mx-auto mb-2" />
                               <p className="font-bold text-[#262523] text-sm">No tickets found</p>
                               <p className="text-[#8c8881] mt-1">Submitted service requests will appear here in real-time.</p>
@@ -1039,17 +1177,33 @@ export const AdminControlCenter: React.FC = () => {
                         ) : (
                           filteredTickets.map((t) => {
                             const isResolved = t.status === 'resolved' || t.status === 'closed';
+                            const slaEv = evaluateTicketSLA(t, slaConfig);
                             return (
                               <tr
                                 key={t.id}
                                 onClick={() => setSelectedTicket(t)}
                                 className="hover:bg-[#f4f4f2]/70 cursor-pointer transition-colors"
                               >
-                                <td className="px-5 py-3.5 font-mono font-bold text-[#8c6d53]">{t.id}</td>
+                                <td className="px-5 py-3.5 font-mono font-bold text-[#8c6d53] tabular-nums">{t.id}</td>
                                 <td className="px-5 py-3.5 font-bold text-[#262523]">{t.title}</td>
                                 <td className="px-5 py-3.5 text-[#5c5954]">{getCategoryLabel(t.category)}</td>
                                 <td className="px-5 py-3.5">
                                   <span className="capitalize font-semibold text-[#5c5954]">{t.priority}</span>
+                                </td>
+                                <td className="px-5 py-3.5 font-mono text-[11px] tabular-nums">
+                                  <span
+                                    className={
+                                      slaEv.status === 'met'
+                                        ? 'text-[#2f6b45] font-semibold'
+                                        : slaEv.status === 'breached' || slaEv.status === 'resolved_late'
+                                        ? 'text-[#6e533c] font-bold'
+                                        : slaEv.status === 'at_risk'
+                                        ? 'text-[#8c6d53] font-semibold'
+                                        : 'text-[#5c5954]'
+                                    }
+                                  >
+                                    {slaEv.shortLabel} ({slaEv.targetHours}h)
+                                  </span>
                                 </td>
                                 <td className="px-5 py-3.5">
                                   <span
@@ -1065,6 +1219,175 @@ export const AdminControlCenter: React.FC = () => {
                                 <td className="px-5 py-3.5 text-[#262523]">{t.requester_name}</td>
                                 <td className="px-5 py-3.5 text-right">
                                   <button className="text-[#8c6d53] font-bold hover:underline cursor-pointer">Inspect</button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SECURITY AUDIT LOG TAB */}
+            {activeNav === 'security_audit' && (
+              <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-bold text-[#262523]">Security Audit Log</h2>
+                    <p className="text-xs text-[#5c5954] mt-0.5">
+                      Immutable audit trail of role assignments, account approvals, suspensions, and SLA policy updates
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveNav('settings')}
+                      className="px-3.5 py-2 rounded-xl bg-white hover:bg-[#f5efe8] text-[#5c5954] hover:text-[#6e533c] border border-[#e2dfd9] text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0 calm-btn"
+                    >
+                      Configure SLA Targets
+                    </button>
+                    <button
+                      onClick={handleExportAuditCSV}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0 calm-btn"
+                    >
+                      <Download className="size-3.5" />
+                      <span>Export Audit CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Audit KPI Strip */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-4">
+                    <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">Total Logged Events</p>
+                    <p className="text-2xl font-bold text-[#262523] mt-2 font-mono tabular-nums">{animAuditTotal}</p>
+                    <p className="text-[11px] text-[#8c8881] mt-1">All tracked security mutations</p>
+                  </div>
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-4">
+                    <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">Role Modifications</p>
+                    <p className="text-2xl font-bold text-[#8c6d53] mt-2 font-mono tabular-nums">{animRoleChanges}</p>
+                    <p className="text-[11px] text-[#8c8881] mt-1">Privilege & portal assignments</p>
+                  </div>
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-4">
+                    <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">Approvals & Access</p>
+                    <p className="text-2xl font-bold text-[#2f6b45] mt-2 font-mono tabular-nums">{animApprovalActions}</p>
+                    <p className="text-[11px] text-[#8c8881] mt-1">Approvals, suspensions & removals</p>
+                  </div>
+                  <div className="bg-white border border-[#e2dfd9] rounded-2xl p-4">
+                    <p className="text-[11px] font-bold text-[#5c5954] uppercase tracking-wider">SLA & Profile Changes</p>
+                    <p className="text-2xl font-bold text-[#262523] mt-2 font-mono tabular-nums">{animPolicyChanges}</p>
+                    <p className="text-[11px] text-[#8c8881] mt-1">Custom SLA & account edits</p>
+                  </div>
+                </div>
+
+                {/* Filter & Search Bar */}
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+                    {[
+                      { id: 'all', label: 'All Events' },
+                      { id: 'role', label: 'Role Changes' },
+                      { id: 'approval', label: 'Approvals' },
+                      { id: 'status', label: 'Suspensions & Removals' },
+                      { id: 'policy', label: 'SLA Policy' },
+                      { id: 'profile', label: 'Profile Edits' },
+                    ].map((tab) => {
+                      const active = auditCategoryFilter === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setAuditCategoryFilter(tab.id as any)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                            active
+                              ? 'bg-[#8c6d53] text-white'
+                              : 'bg-[#f4f4f2] text-[#5c5954] hover:text-[#262523] hover:bg-[#ebe9e4]'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="relative w-full lg:w-72">
+                    <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8c8881]" />
+                    <input
+                      type="text"
+                      value={auditSearch}
+                      onChange={(e) => setAuditSearch(e.target.value)}
+                      placeholder="Filter by actor, target, or details..."
+                      className="w-full rounded-xl border border-[#e2dfd9] bg-[#f4f4f2] focus:bg-white pl-9 pr-3 py-1.5 text-xs text-[#262523] outline-none focus:border-[#8c6d53]"
+                    />
+                  </div>
+                </div>
+
+                {/* Audit Table */}
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="border-b border-[#e2dfd9] bg-[#f4f4f2] font-bold uppercase tracking-wider text-[#5c5954] text-[10px]">
+                        <tr>
+                          <th className="px-5 py-3.5">Audit ID</th>
+                          <th className="px-5 py-3.5">Event</th>
+                          <th className="px-5 py-3.5">Actor</th>
+                          <th className="px-5 py-3.5">Target Account / Resource</th>
+                          <th className="px-5 py-3.5">State Change & Summary</th>
+                          <th className="px-5 py-3.5 text-right">Timestamp</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#ebe9e4]">
+                        {filteredAuditLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-5 py-12 text-center text-xs text-[#5c5954]">
+                              <ShieldCheck className="size-8 text-[#8c8881] mx-auto mb-2" />
+                              <p className="font-bold text-[#262523] text-sm">No matching audit entries</p>
+                              <p className="text-[#8c8881] mt-1">Role changes, user approvals, and SLA updates will be recorded here automatically.</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredAuditLogs.map((entry) => {
+                            const isPositive =
+                              entry.action === 'USER_APPROVED' || entry.action === 'USER_RESTORED';
+                            return (
+                              <tr key={entry.id} className="hover:bg-[#f4f4f2]/60 transition-colors">
+                                <td className="px-5 py-3.5 font-mono font-bold text-[#8c6d53] tabular-nums whitespace-nowrap">
+                                  {entry.id}
+                                </td>
+                                <td className="px-5 py-3.5 whitespace-nowrap">
+                                  <span
+                                    className={`font-semibold text-[11px] ${
+                                      isPositive ? 'text-[#2f6b45]' : 'text-[#6e533c]'
+                                    }`}
+                                  >
+                                    {entry.action.replace(/_/g, ' ')}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  <p className="font-bold text-[#262523]">{entry.actor_name}</p>
+                                  <p className="text-[11px] text-[#8c8881] font-mono">{entry.actor_email}</p>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  <p className="font-bold text-[#262523]">{entry.target_name}</p>
+                                  <p className="text-[11px] text-[#8c8881] font-mono">{entry.target_email}</p>
+                                </td>
+                                <td className="px-5 py-3.5">
+                                  {entry.previous_value && entry.new_value && (
+                                    <div className="text-[11px] font-mono text-[#6e533c] mb-0.5 tabular-nums">
+                                      <span>{entry.previous_value}</span>
+                                      <span className="mx-1.5 text-[#8c8881]">→</span>
+                                      <span className="font-bold">{entry.new_value}</span>
+                                    </div>
+                                  )}
+                                  <p className="text-xs text-[#5c5954]">{entry.details}</p>
+                                </td>
+                                <td className="px-5 py-3.5 text-right font-mono text-[11px] text-[#8c8881] tabular-nums whitespace-nowrap">
+                                  {new Date(entry.created_at).toLocaleString([], {
+                                    month: 'short',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
                                 </td>
                               </tr>
                             );
@@ -1217,25 +1540,172 @@ export const AdminControlCenter: React.FC = () => {
 
             {/* REPORTS TAB */}
             {activeNav === 'reports' && (
-              <div className="space-y-4">
-                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-3">
-                  <h2 className="text-xl font-bold text-[#262523]">Enterprise Reports & SLA Insights</h2>
-                  <p className="text-xs text-[#5c5954]">Export audit-ready CSV records of all resolved tickets, SLA compliance, and user roles.</p>
-                  <button
-                    onClick={handleExportCSV}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white px-4 py-2.5 text-xs font-semibold cursor-pointer calm-btn"
-                  >
-                    <Download className="size-4" /> Download Complete Report
-                  </button>
+              <div className="space-y-5">
+                <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-bold text-[#262523]">Enterprise Reports & SLA Insights</h2>
+                      <p className="text-xs text-[#5c5954] mt-0.5">
+                        Live SLA compliance metrics evaluated against your custom priority thresholds ({slaConfig.urgent}h / {slaConfig.high}h / {slaConfig.medium}h / {slaConfig.low}h).
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setActiveNav('settings')}
+                        className="px-3.5 py-2.5 rounded-xl bg-[#f4f4f2] hover:bg-[#ebe9e4] text-[#262523] border border-[#e2dfd9] text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 calm-btn"
+                      >
+                        Edit SLA Thresholds
+                      </button>
+                      <button
+                        onClick={handleExportCSV}
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white px-4 py-2.5 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 calm-btn"
+                      >
+                        <Download className="size-4" /> Download Requests CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-[#ebe9e4]">
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9]">
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase">SLA Compliance Rate</p>
+                      <p className="text-2xl font-bold text-[#2f6b45] mt-1 font-mono tabular-nums">{slaSummary.complianceRate}%</p>
+                      <p className="text-[11px] text-[#8c8881] mt-0.5">Tickets within target window</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9]">
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase">On Track / Met SLA</p>
+                      <p className="text-2xl font-bold text-[#2f6b45] mt-1 font-mono tabular-nums">{slaSummary.compliantCount}</p>
+                      <p className="text-[11px] text-[#8c8881] mt-0.5">Nominal resolution pace</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9]">
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase">Approaching Threshold</p>
+                      <p className="text-2xl font-bold text-[#8c6d53] mt-1 font-mono tabular-nums">{slaSummary.atRiskCount}</p>
+                      <p className="text-[11px] text-[#8c8881] mt-0.5">&ge; 75% of target elapsed</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9]">
+                      <p className="text-[11px] font-bold text-[#5c5954] uppercase">Overdue / Late</p>
+                      <p className="text-2xl font-bold text-[#6e533c] mt-1 font-mono tabular-nums">{slaSummary.breachedCount}</p>
+                      <p className="text-[11px] text-[#8c8881] mt-0.5">Exceeded priority target</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* SETTINGS TAB */}
             {activeNav === 'settings' && (
-              <div className="space-y-4">
+              <div className="space-y-5">
+                {/* Custom SLA Target Thresholds Configuration */}
+                <form
+                  onSubmit={handleSaveSLATargets}
+                  className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-5"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#ebe9e4] pb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-[#262523]">Custom SLA Target Thresholds</h2>
+                      <p className="text-xs text-[#5c5954] mt-0.5">
+                        Configure target resolution hours for each ticket priority level. Updates apply immediately across Technician and Admin views and are logged in the Security Audit Log.
+                      </p>
+                    </div>
+                    <div className="text-xs font-mono text-[#8c8881] tabular-nums shrink-0">
+                      Last updated: {new Date(slaConfig.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#262523]">Urgent Priority (P1)</label>
+                        <span className="text-[11px] font-mono text-[#6e533c] tabular-nums">Target Hours</span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="168"
+                        value={slaForm.urgent}
+                        onChange={(e) => setSlaForm((prev) => ({ ...prev, urgent: parseFloat(e.target.value) || 0.5 }))}
+                        className="w-full rounded-lg border border-[#d6c2b0] bg-white px-3 py-2 text-sm font-mono font-bold text-[#262523] tabular-nums outline-none focus:border-[#8c6d53]"
+                      />
+                      <p className="text-[11px] text-[#8c8881]">Critical system outages &amp; escalations</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#262523]">High Priority (P2)</label>
+                        <span className="text-[11px] font-mono text-[#6e533c] tabular-nums">Target Hours</span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="168"
+                        value={slaForm.high}
+                        onChange={(e) => setSlaForm((prev) => ({ ...prev, high: parseFloat(e.target.value) || 1 }))}
+                        className="w-full rounded-lg border border-[#e2dfd9] bg-white px-3 py-2 text-sm font-mono font-bold text-[#262523] tabular-nums outline-none focus:border-[#8c6d53]"
+                      />
+                      <p className="text-[11px] text-[#8c8881]">Blocked workflows &amp; security alerts</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#262523]">Medium Priority (P3)</label>
+                        <span className="text-[11px] font-mono text-[#5c5954] tabular-nums">Target Hours</span>
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        max="336"
+                        value={slaForm.medium}
+                        onChange={(e) => setSlaForm((prev) => ({ ...prev, medium: parseFloat(e.target.value) || 2 }))}
+                        className="w-full rounded-lg border border-[#e2dfd9] bg-white px-3 py-2 text-sm font-mono font-bold text-[#262523] tabular-nums outline-none focus:border-[#8c6d53]"
+                      />
+                      <p className="text-[11px] text-[#8c8881]">Standard hardware &amp; software requests</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#262523]">Low Priority (P4)</label>
+                        <span className="text-[11px] font-mono text-[#5c5954] tabular-nums">Target Hours</span>
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        max="720"
+                        value={slaForm.low}
+                        onChange={(e) => setSlaForm((prev) => ({ ...prev, low: parseFloat(e.target.value) || 4 }))}
+                        className="w-full rounded-lg border border-[#e2dfd9] bg-white px-3 py-2 text-sm font-mono font-bold text-[#262523] tabular-nums outline-none focus:border-[#8c6d53]"
+                      />
+                      <p className="text-[11px] text-[#8c8881]">General inquiries &amp; routine provisioning</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        triggerElementPop(e.currentTarget);
+                        resetSLAConfig();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#f4f4f2] hover:bg-[#ebe9e4] text-[#5c5954] hover:text-[#262523] border border-[#e2dfd9] text-xs font-semibold cursor-pointer transition-colors calm-btn"
+                    >
+                      <RotateCcw className="size-3.5" />
+                      <span>Reset Defaults (2h / 4h / 8h / 24h)</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8c6d53] hover:bg-[#765a43] text-white text-xs font-semibold cursor-pointer transition-colors calm-btn"
+                    >
+                      <Save className="size-3.5" />
+                      <span>Save SLA Targets</span>
+                    </button>
+                  </div>
+                </form>
+
                 <div className="bg-white border border-[#e2dfd9] rounded-2xl p-6 space-y-4">
-                  <h2 className="text-xl font-bold text-[#262523]">System Security & Access Settings</h2>
+                  <h2 className="text-lg font-bold text-[#262523]">System Security & Access Settings</h2>
                   <div className="space-y-3 text-xs text-[#5c5954]">
                     <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex items-center justify-between">
                       <div>
@@ -1249,8 +1719,8 @@ export const AdminControlCenter: React.FC = () => {
 
                     <div className="p-4 rounded-xl bg-[#f4f4f2] border border-[#e2dfd9] flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-[#262523]">Mandatory Email Verification</p>
-                        <p className="text-[#5c5954]">Require 6-digit confirmation code on all user registrations</p>
+                        <p className="font-bold text-[#262523]">Strict Role-Based Portal Isolation</p>
+                        <p className="text-[#5c5954]">Lock Customers and Technicians to their dedicated workspaces while Admin retains full oversight</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] font-bold text-[10px]">
                         ENFORCED

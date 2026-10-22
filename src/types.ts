@@ -121,3 +121,56 @@ export interface CategoryMeta {
   blurb: string;
   iconName: string;
 }
+
+export type SecurityAuditAction =
+  | 'ROLE_UPDATED'
+  | 'USER_APPROVED'
+  | 'USER_REJECTED'
+  | 'USER_SUSPENDED'
+  | 'USER_RESTORED'
+  | 'USER_DELETED'
+  | 'SLA_UPDATED'
+  | 'PROFILE_UPDATED';
+
+export type SecurityAuditCategory =
+  | 'role'
+  | 'approval'
+  | 'status'
+  | 'policy'
+  | 'profile';
+
+export interface SecurityAuditEntry {
+  id: string;
+  action: SecurityAuditAction;
+  category: SecurityAuditCategory;
+  actor_id: string;
+  actor_name: string;
+  actor_email: string;
+  target_id: string;
+  target_name: string;
+  target_email: string;
+  details: string;
+  previous_value?: string;
+  new_value?: string;
+  created_at: string;
+}
+
+export interface SLAConfig {
+  urgent: number; // target resolution hours
+  high: number;
+  medium: number;
+  low: number;
+  updated_at: string;
+  updated_by: string;
+}
+
+export interface SLAEvaluation {
+  status: 'met' | 'resolved_late' | 'on_track' | 'at_risk' | 'breached';
+  label: string;
+  shortLabel: string;
+  targetHours: number;
+  elapsedHours: number;
+  remainingMinutes: number;
+  percentElapsed: number;
+}
+

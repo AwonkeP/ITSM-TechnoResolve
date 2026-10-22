@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { TicketPriority, TicketStatus } from '../types';
-import { CATEGORIES, getCategoryLabel, MACROS } from '../data/seedData';
+import { CATEGORIES, getCategoryLabel, MACROS, evaluateTicketSLA } from '../data/seedData';
 import {
   Ticket as TicketIcon, List, Settings,
   Bell, LogOut, Search, SlidersHorizontal, Copy, UserPlus,
@@ -31,6 +31,7 @@ export const TechnicianWorkspace: React.FC = () => {
     signOut,
     setIsNotificationCenterOpen,
     showToast,
+    slaConfig,
   } = useApp();
 
   const [filterMode, setFilterMode] = useState<'all' | 'mine' | 'new' | 'in_progress' | 'escalated' | 'resolved' | 'dashboard' | 'reports'>('all');
@@ -459,10 +460,12 @@ export const TechnicianWorkspace: React.FC = () => {
         </nav>
 
         {/* Quiet Footer Summary */}
-        <div className="p-3 border-t border-[#e2dfd9] bg-[#fafaf9] text-[11px] text-stone-500">
+        <div className="p-3 border-t border-[#e2dfd9] bg-[#fafaf9] text-[11px] text-stone-500 space-y-1">
           <div className="flex items-center justify-between">
-            <span>SLA Status</span>
-            <span className="font-semibold text-[#2f6b45]">Nominal</span>
+            <span>SLA Policy</span>
+            <span className="font-mono font-semibold text-[#2f6b45] tabular-nums">
+              {slaConfig.urgent}h/{slaConfig.high}h/{slaConfig.medium}h/{slaConfig.low}h
+            </span>
           </div>
         </div>
       </aside>
@@ -649,6 +652,7 @@ export const TechnicianWorkspace: React.FC = () => {
               {filteredTickets.map((ticket) => {
                 const isSelected = ticket.id === selectedTicketId;
                 const isResolved = ticket.status === 'resolved' || ticket.status === 'closed';
+                const slaEv = evaluateTicketSLA(ticket, slaConfig);
 
                 return (
                   <div
@@ -673,8 +677,21 @@ export const TechnicianWorkspace: React.FC = () => {
                          {isResolved ? <CheckCircle2 className="size-3.5 text-[#2f6b45]" /> : ticket.requester_name.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                            <span className="font-mono font-semibold text-xs text-stone-600 line-clamp-1 tabular-nums">{ticket.id}</span>
+                           <span
+                             className={`text-[10px] font-mono tabular-nums shrink-0 ${
+                               slaEv.status === 'met'
+                                 ? 'text-[#2f6b45] font-semibold'
+                                 : slaEv.status === 'breached' || slaEv.status === 'resolved_late'
+                                 ? 'text-[#6e533c] font-bold'
+                                 : slaEv.status === 'at_risk'
+                                 ? 'text-[#8c6d53] font-semibold'
+                                 : 'text-stone-500'
+                             }`}
+                           >
+                             {slaEv.shortLabel}
+                           </span>
                         </div>
                         <p className="text-xs font-semibold line-clamp-1 text-stone-900">{ticket.title}</p>
                         <p className="text-[11px] text-stone-500">{getCategoryLabel(ticket.category)}</p>
@@ -765,7 +782,24 @@ export const TechnicianWorkspace: React.FC = () => {
                        </div>
                        <p className="flex justify-between"><span className="text-stone-500">Category:</span> <span className="font-medium capitalize text-stone-800">{activeTicket.category}</span></p>
                        <p className="flex justify-between"><span className="text-stone-500">Created:</span> <span className="font-medium tabular-nums text-stone-800">{new Date(activeTicket.created_at).toLocaleDateString()}</span></p>
-                       <p className="flex justify-between items-center"><span className="text-stone-500">SLA Status:</span> <span className="bg-[#e6f4ea] text-[#2f6b45] border border-[#c6e6d0] px-2 py-0.2 rounded font-semibold text-[10px]">Nominal</span></p>
+                       {(() => {
+                         const activeSla = evaluateTicketSLA(activeTicket, slaConfig);
+                         const isGood = activeSla.status === 'met' || activeSla.status === 'on_track';
+                         return (
+                           <p className="flex justify-between items-center gap-2">
+                             <span className="text-stone-500">SLA Target:</span>
+                             <span
+                               className={`px-2 py-0.5 rounded font-mono font-semibold text-[10px] tabular-nums border ${
+                                 isGood
+                                   ? 'bg-[#e6f4ea] text-[#2f6b45] border-[#c6e6d0]'
+                                   : 'bg-[#f5efe8] text-[#6e533c] border-[#d6c2b0]'
+                               }`}
+                             >
+                               {activeSla.label}
+                             </span>
+                           </p>
+                         );
+                       })()}
                     </div>
                   </div>
                 </div>

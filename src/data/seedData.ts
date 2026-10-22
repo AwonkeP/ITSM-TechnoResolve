@@ -1,4 +1,109 @@
-import { CategoryMeta, FAQItem, Macro, Ticket, TicketMessage, UserProfile, EmailOutboxItem } from '../types';
+import {
+  CategoryMeta,
+  FAQItem,
+  Macro,
+  Ticket,
+  TicketMessage,
+  UserProfile,
+  EmailOutboxItem,
+  SLAConfig,
+  SLAEvaluation,
+  SecurityAuditEntry,
+} from '../types';
+
+export const DEFAULT_SLA_CONFIG: SLAConfig = {
+  urgent: 2,
+  high: 4,
+  medium: 8,
+  low: 24,
+  updated_at: new Date().toISOString(),
+  updated_by: 'philibaneawonke@gmail.com',
+};
+
+export function evaluateTicketSLA(ticket: Ticket, slaConfig: SLAConfig): SLAEvaluation {
+  const targetHours =
+    ticket.priority === 'urgent'
+      ? slaConfig.urgent
+      : ticket.priority === 'high'
+      ? slaConfig.high
+      : ticket.priority === 'medium'
+      ? slaConfig.medium
+      : slaConfig.low;
+
+  const targetMs = Math.max(0.5, targetHours) * 60 * 60 * 1000;
+  const createdMs = new Date(ticket.created_at).getTime() || Date.now();
+  const isResolved = ticket.status === 'resolved' || ticket.status === 'closed';
+  const endMs = isResolved && ticket.resolved_at ? new Date(ticket.resolved_at).getTime() : Date.now();
+  const elapsedMs = Math.max(0, endMs - createdMs);
+  const elapsedHours = Number((elapsedMs / (1000 * 60 * 60)).toFixed(1));
+  const remainingMinutes = Math.round((targetMs - elapsedMs) / (1000 * 60));
+  const percentElapsed = Math.min(200, Math.round((elapsedMs / targetMs) * 100));
+
+  const formatDuration = (mins: number) => {
+    const absMins = Math.abs(mins);
+    if (absMins < 60) return `${absMins}m`;
+    const h = Math.floor(absMins / 60);
+    const m = absMins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
+
+  if (isResolved) {
+    if (elapsedMs <= targetMs) {
+      return {
+        status: 'met',
+        label: `Met SLA (${elapsedHours}h / ${targetHours}h)`,
+        shortLabel: `Met SLA · ${elapsedHours}h`,
+        targetHours,
+        elapsedHours,
+        remainingMinutes,
+        percentElapsed,
+      };
+    }
+    return {
+      status: 'resolved_late',
+      label: `Resolved Late (${elapsedHours}h / ${targetHours}h)`,
+      shortLabel: `Late · ${elapsedHours}h`,
+      targetHours,
+      elapsedHours,
+      remainingMinutes,
+      percentElapsed,
+    };
+  }
+
+  if (remainingMinutes < 0) {
+    return {
+      status: 'breached',
+      label: `Overdue by ${formatDuration(remainingMinutes)} (${targetHours}h SLA)`,
+      shortLabel: `${formatDuration(remainingMinutes)} overdue`,
+      targetHours,
+      elapsedHours,
+      remainingMinutes,
+      percentElapsed,
+    };
+  }
+
+  if (percentElapsed >= 75) {
+    return {
+      status: 'at_risk',
+      label: `At Risk · ${formatDuration(remainingMinutes)} left (${targetHours}h SLA)`,
+      shortLabel: `${formatDuration(remainingMinutes)} left`,
+      targetHours,
+      elapsedHours,
+      remainingMinutes,
+      percentElapsed,
+    };
+  }
+
+  return {
+    status: 'on_track',
+    label: `On Track · ${formatDuration(remainingMinutes)} left (${targetHours}h SLA)`,
+    shortLabel: `${formatDuration(remainingMinutes)} left`,
+    targetHours,
+    elapsedHours,
+    remainingMinutes,
+    percentElapsed,
+  };
+}
 
 export const CATEGORIES: CategoryMeta[] = [
   {
@@ -100,7 +205,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: 'What are the SLA response times for different priorities?',
-    a: 'Urgent (P1): < 15 minutes; High (P2): < 1 hour; Medium (P3): < 4 hours; Low (P4): < 24 business hours.',
+    a: 'Urgent (P1): < 2 hours; High (P2): < 4 hours; Medium (P3): < 8 hours; Low (P4): < 24 business hours (customizable by Administrator).',
     category: 'general',
   },
 ];
@@ -110,3 +215,36 @@ export const INITIAL_USERS: UserProfile[] = [];
 export const INITIAL_TICKETS: Ticket[] = [];
 export const INITIAL_MESSAGES: TicketMessage[] = [];
 export const INITIAL_OUTBOX: EmailOutboxItem[] = [];
+export const INITIAL_AUDIT_LOGS: SecurityAuditEntry[] = [
+  {
+    id: 'AUD-1001',
+    action: 'ROLE_UPDATED',
+    category: 'role',
+    actor_id: 'system-bootstrap',
+    actor_name: 'System Security Policy',
+    actor_email: 'philibaneawonke@gmail.com',
+    target_id: 'admin-root',
+    target_name: 'Philibane Awonke',
+    target_email: 'philibaneawonke@gmail.com',
+    details: 'Designated primary System Administrator role and enforced strict portal isolation.',
+    previous_value: 'USER',
+    new_value: 'ADMIN',
+    created_at: new Date(Date.now() - 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'AUD-1002',
+    action: 'SLA_UPDATED',
+    category: 'policy',
+    actor_id: 'system-bootstrap',
+    actor_name: 'Philibane Awonke',
+    actor_email: 'philibaneawonke@gmail.com',
+    target_id: 'sla-policy-global',
+    target_name: 'Global SLA Policy',
+    target_email: 'system@technoresolve.com',
+    details: 'Initialized SLA resolution targets: Urgent 2h · High 4h · Medium 8h · Low 24h.',
+    previous_value: 'Default',
+    new_value: '2h / 4h / 8h / 24h',
+    created_at: new Date(Date.now() - 1800 * 1000).toISOString(),
+  },
+];
+

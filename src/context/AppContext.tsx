@@ -2,6 +2,10 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import {
   AppNotification,
   EmailOutboxItem,
+  SecurityAuditAction,
+  SecurityAuditCategory,
+  SecurityAuditEntry,
+  SLAConfig,
   Ticket,
   TicketCategory,
   TicketMessage,
@@ -9,6 +13,8 @@ import {
   UserRole,
 } from '../types';
 import {
+  DEFAULT_SLA_CONFIG,
+  INITIAL_AUDIT_LOGS,
   INITIAL_MESSAGES,
   INITIAL_OUTBOX,
   INITIAL_TICKETS,
@@ -118,6 +124,10 @@ interface AppContextType {
   isApproved: boolean;
   isEmailVerified: boolean;
   pendingUsersCount: number;
+  auditLogs: SecurityAuditEntry[];
+  slaConfig: SLAConfig;
+  updateSLAConfig: (next: Omit<SLAConfig, 'updated_at' | 'updated_by'>) => void;
+  resetSLAConfig: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -126,6 +136,8 @@ const STORAGE_KEYS = {
   CURRENT_USER_ID: 'technoresolve_current_user_id_v4',
   VIEW_ROLE: 'technoresolve_view_role_v4',
   UNREAD: 'technoresolve_unread_v4',
+  AUDIT_LOGS: 'technoresolve_audit_logs_v1',
+  SLA_CONFIG: 'technoresolve_sla_config_v1',
 };
 
 // Play a pleasant synthesizer notification sound via Web Audio API
@@ -182,6 +194,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [messages, setMessages] = useState<TicketMessage[]>(INITIAL_MESSAGES);
   const [outbox, setOutbox] = useState<EmailOutboxItem[]>(INITIAL_OUTBOX);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  const [auditLogs, setAuditLogs] = useState<SecurityAuditEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return INITIAL_AUDIT_LOGS;
+  });
+
+  const [slaConfig, setSlaConfigState] = useState<SLAConfig>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SLA_CONFIG);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.urgent === 'number') return parsed;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_SLA_CONFIG;
+  });
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const savedId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID);
@@ -373,6 +411,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.UNREAD, JSON.stringify(unreadCounts));
   }, [unreadCounts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(auditLogs));
+    } catch (e) {
+      // ignore
+    }
+  }, [auditLogs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SLA_CONFIG, JSON.stringify(slaConfig));
+    } catch (e) {
+      // ignore
+    }
+  }, [slaConfig]);
+
+  const recordAuditEvent = useCallback(
+    (params: {
+      action: SecurityAuditAction;
+      category: SecurityAuditCategory;
+      target_id: string;
+      target_name: string;
+      target_email: string;
+      details: string;
+      previous_value?: string;
+      new_value?: string;
+    }) => {
+      const entry: SecurityAuditEntry = {
+        id: `AUD-${1000 + auditLogs.length + 1}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`,
+        action: params.action,
+        category: params.category,
+        actor_id: currentUser?.id || 'admin-actor',
+        actor_name: currentUser?.full_name || 'System Administrator',
+        actor_email: currentUser?.email || 'philibaneawonke@gmail.com',
+        target_id: params.target_id,
+        target_name: params.target_name,
+        target_email: params.target_email,
+        details: params.details,
+        previous_value: params.previous_value,
+        new_value: params.new_value,
+        created_at: new Date().toISOString(),
+      };
+      setAuditLogs((prev) => [entry, ...prev]);
+    },
+    [auditLogs.length, currentUser]
+  );
 
   // Continuous enforcement: Customers ('user') are strictly locked to 'user' viewRole;
   // Technicians ('technician') are strictly locked to 'technician' viewRole.
@@ -757,6 +842,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUserRole = async (userId: string, role: UserRole) => {
+    const targetUser = users.find((u) => u.id === userId);
+    const prevRole = targetUser?.role || 'user';
+
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, role, role_assigned_by_admin: true } : u))
     );
@@ -771,6 +859,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setViewRoleState(role);
       localStorage.setItem(STORAGE_KEYS.VIEW_ROLE, role);
     }
+
+    recordAuditEvent({
+      action: 'ROLE_UPDATED',
+      category: 'role',
+      target_id: userId,
+      target_name: targetUser?.full_name || 'User Account',
+      target_email: targetUser?.email || userId,
+      details: `Updated role permissions from ${prevRole.toUpperCase()} to ${role.toUpperCase()}.`,
+      previous_value: prevRole.toUpperCase(),
+      new_value: role.toUpperCase(),
+    });
 
     const notif: AppNotification = {
       id: `notif-${Date.now()}`,
@@ -809,6 +908,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(updatedProfile);
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedProfile : u)));
 
+    recordAuditEvent({
+      action: 'PROFILE_UPDATED',
+      category: 'profile',
+      target_id: currentUser.id,
+      target_name: updatedProfile.full_name,
+      target_email: updatedProfile.email,
+      details: `Updated account profile details (${updatedProfile.company || 'Enterprise'}).`,
+      previous_value: currentUser.full_name,
+      new_value: updatedProfile.full_name,
+    });
+
     try {
       await saveUserToFirestore(updatedProfile);
       showToast('Account profile updated successfully.', 'success');
@@ -829,12 +939,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    const targetUser = users.find((u) => u.id === userId);
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...updates } : u)));
     await updateUserInFirestore(userId, updates);
 
-    const targetUser = users.find((u) => u.id === userId);
     const updatedUserRole = updates.role || targetUser?.role || 'user';
     const roleLabel = updatedUserRole === 'admin' ? 'Administrator' : updatedUserRole === 'technician' ? 'Support Technician' : 'Customer';
+
+    if (updates.banned !== undefined && targetUser) {
+      recordAuditEvent({
+        action: updates.banned ? 'USER_SUSPENDED' : 'USER_RESTORED',
+        category: 'status',
+        target_id: userId,
+        target_name: targetUser.full_name,
+        target_email: targetUser.email,
+        details: updates.banned
+          ? `Suspended user account access for ${targetUser.full_name}.`
+          : `Restored active account access for ${targetUser.full_name}.`,
+        previous_value: updates.banned ? 'ACTIVE' : 'SUSPENDED',
+        new_value: updates.banned ? 'SUSPENDED' : 'ACTIVE',
+      });
+    }
 
     if (targetUser) {
       if (updates.is_approved) {
@@ -882,7 +1007,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Unauthorized: Only administrators can delete users.', 'error');
       return;
     }
+    const targetUser = users.find((u) => u.id === userId);
     setUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (targetUser) {
+      recordAuditEvent({
+        action: 'USER_DELETED',
+        category: 'status',
+        target_id: userId,
+        target_name: targetUser.full_name,
+        target_email: targetUser.email,
+        details: `Permanently removed user account (${targetUser.role.toUpperCase()}).`,
+        previous_value: targetUser.role.toUpperCase(),
+        new_value: 'DELETED',
+      });
+    }
     try {
       await deleteUserFromFirestore(userId);
       showToast('User account successfully removed.', 'info');
@@ -900,13 +1038,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('You cannot approve your own account.', 'error');
       return;
     }
+    const targetUser = users.find((u) => u.id === userId);
+    const assignedRole = role || 'user';
     const updates: Partial<UserProfile> = {
       is_approved: true,
       rejected: false,
-      role: role || 'user',
+      role: assignedRole,
       role_assigned_by_admin: true,
     };
     await updateUserStatus(userId, updates);
+    if (targetUser) {
+      recordAuditEvent({
+        action: 'USER_APPROVED',
+        category: 'approval',
+        target_id: userId,
+        target_name: targetUser.full_name,
+        target_email: targetUser.email,
+        details: `Approved account registration and assigned ${assignedRole.toUpperCase()} role.`,
+        previous_value: 'PENDING',
+        new_value: `APPROVED (${assignedRole.toUpperCase()})`,
+      });
+    }
   };
 
   const rejectUser = async (userId: string) => {
@@ -914,8 +1066,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Unauthorized: Only administrators can reject users.', 'error');
       return;
     }
+    const targetUser = users.find((u) => u.id === userId);
     await updateUserStatus(userId, { is_approved: false, rejected: true });
+    if (targetUser) {
+      recordAuditEvent({
+        action: 'USER_REJECTED',
+        category: 'approval',
+        target_id: userId,
+        target_name: targetUser.full_name,
+        target_email: targetUser.email,
+        details: `Rejected account registration request for ${targetUser.full_name}.`,
+        previous_value: 'PENDING',
+        new_value: 'REJECTED',
+      });
+    }
     showToast('User registration rejected', 'info');
+  };
+
+  const updateSLAConfig = (next: Omit<SLAConfig, 'updated_at' | 'updated_by'>) => {
+    if (!isAdmin) {
+      showToast('Unauthorized: Only administrators can modify SLA targets.', 'error');
+      return;
+    }
+    const prevSummary = `${slaConfig.urgent}h / ${slaConfig.high}h / ${slaConfig.medium}h / ${slaConfig.low}h`;
+    const nextSummary = `${next.urgent}h / ${next.high}h / ${next.medium}h / ${next.low}h`;
+    const updated: SLAConfig = {
+      urgent: Math.max(0.5, Number(next.urgent) || 2),
+      high: Math.max(0.5, Number(next.high) || 4),
+      medium: Math.max(1, Number(next.medium) || 8),
+      low: Math.max(1, Number(next.low) || 24),
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser?.email || 'philibaneawonke@gmail.com',
+    };
+    setSlaConfigState(updated);
+    recordAuditEvent({
+      action: 'SLA_UPDATED',
+      category: 'policy',
+      target_id: 'sla-policy-global',
+      target_name: 'Global SLA Target Thresholds',
+      target_email: updated.updated_by,
+      details: `Updated custom SLA resolution targets: Urgent ${updated.urgent}h · High ${updated.high}h · Medium ${updated.medium}h · Low ${updated.low}h.`,
+      previous_value: prevSummary,
+      new_value: nextSummary,
+    });
+    showToast('Custom SLA target thresholds saved and applied.', 'success');
+  };
+
+  const resetSLAConfig = () => {
+    if (!isAdmin) return;
+    const prevSummary = `${slaConfig.urgent}h / ${slaConfig.high}h / ${slaConfig.medium}h / ${slaConfig.low}h`;
+    const resetVal: SLAConfig = {
+      ...DEFAULT_SLA_CONFIG,
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser?.email || 'philibaneawonke@gmail.com',
+    };
+    setSlaConfigState(resetVal);
+    recordAuditEvent({
+      action: 'SLA_UPDATED',
+      category: 'policy',
+      target_id: 'sla-policy-global',
+      target_name: 'Global SLA Target Thresholds',
+      target_email: resetVal.updated_by,
+      details: 'Reset SLA resolution targets to standard defaults (2h / 4h / 8h / 24h).',
+      previous_value: prevSummary,
+      new_value: '2h / 4h / 8h / 24h',
+    });
+    showToast('SLA targets reset to default thresholds.', 'info');
   };
 
   // Verify email (legacy stub, immediately successful)
@@ -1282,6 +1498,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isApproved,
         isEmailVerified,
         pendingUsersCount,
+        auditLogs,
+        slaConfig,
+        updateSLAConfig,
+        resetSLAConfig,
       }}
     >
       {children}
