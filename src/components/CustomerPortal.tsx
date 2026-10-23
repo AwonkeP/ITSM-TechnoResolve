@@ -36,7 +36,14 @@ import { NewTicketModal } from './NewTicketModal';
 import { TicketChatModal } from './TicketChatModal';
 import { HelpdeskAssistant } from './HelpdeskAssistant';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAnimatedCounter, animateCalmFadeSlide, triggerElementPop } from '../utils/jsAnimations';
+import {
+  useAnimatedCounter,
+  animateCalmFadeSlide,
+  triggerElementPop,
+  handleCardSpotlightMove,
+  handleCardSpotlightLeave,
+  TicketTriageEngine,
+} from '../utils/jsAnimations';
 
 export const CustomerPortal: React.FC = () => {
   const {
@@ -54,11 +61,16 @@ export const CustomerPortal: React.FC = () => {
   const [helpSubTab, setHelpSubTab] = useState<'assistant' | 'faq'>('assistant');
   const [searchQuery, setSearchQuery] = useState('');
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  const [quickTriageInput, setQuickTriageInput] = useState('VPN token expired and need urgent MFA reset');
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   const [preselectedCategory, setPreselectedCategory] = useState<TicketCategory | undefined>();
   const [preselectedTitle, setPreselectedTitle] = useState<string | undefined>();
   const [preselectedDescription, setPreselectedDescription] = useState<string | undefined>();
   const [activeChatTicket, setActiveChatTicket] = useState<Ticket | null>(null);
+
+  const liveQuickTriage = useMemo(() => {
+    return TicketTriageEngine.evaluate(quickTriageInput);
+  }, [quickTriageInput]);
 
   // Account Profile Editing State
   const [isEditingAccount, setIsEditingAccount] = useState(false);
@@ -457,7 +469,10 @@ export const CustomerPortal: React.FC = () => {
                     return (
                       <button
                         key={card.category}
-                        onClick={() => {
+                        onMouseMove={handleCardSpotlightMove}
+                        onMouseLeave={handleCardSpotlightLeave}
+                        onClick={(e) => {
+                          triggerElementPop(e.currentTarget);
                           setPreselectedCategory(card.category);
                           setIsNewTicketOpen(true);
                         }}
@@ -476,30 +491,72 @@ export const CustomerPortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Primary Action & Calm AI Triage Card */}
+              {/* Primary Action & Interactive Live AI Triage Quick-Check */}
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                 <button
-                  onClick={() => {
+                  onMouseMove={handleCardSpotlightMove}
+                  onMouseLeave={handleCardSpotlightLeave}
+                  onClick={(e) => {
+                    triggerElementPop(e.currentTarget);
                     setPreselectedCategory(undefined);
+                    setPreselectedTitle(undefined);
+                    setPreselectedDescription(undefined);
                     setIsNewTicketOpen(true);
                   }}
                   className="calm-card-hover sm:col-span-2 bg-[#8c6d53] hover:bg-[#765a43] text-white rounded-xl p-5 flex flex-col justify-center items-center gap-2 border border-[#765a43] cursor-pointer"
                 >
                   <Plus className="size-5 stroke-[2.5] text-white" />
                   <span className="font-semibold text-sm text-white">Add New Ticket</span>
+                  <span className="text-[11px] text-white/80">Voice or text intake</span>
                 </button>
 
-                <div className="sm:col-span-3 bg-[#f5efe8] border border-[#e3d5c5] rounded-xl p-5 text-stone-800 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-stone-800 text-sm flex items-center gap-2">
-                      <Sparkles className="size-4 text-[#8c6d53]" /> Automated Triage Active
+                <div className="sm:col-span-3 bg-[#f5efe8] border border-[#e3d5c5] rounded-xl p-4 text-stone-800 flex flex-col justify-between gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-semibold text-stone-800 text-xs sm:text-sm flex items-center gap-1.5">
+                      <Sparkles className="size-4 text-[#8c6d53]" /> Live AI Triage Preview
                     </h3>
-                    <p className="text-xs text-stone-600 leading-relaxed max-w-[260px]">
-                      Requests are quietly categorized and routed to the appropriate support specialist.
-                    </p>
+                    <span className="rounded-full bg-[#e6f4ea] border border-[#c6e6d0] px-2.5 py-0.5 text-[10px] font-semibold text-[#2f6b45] tabular-nums">
+                      {liveQuickTriage.confidence}% Confidence · {liveQuickTriage.slaTargetHours}h SLA
+                    </span>
                   </div>
-                  <div className="shrink-0 text-[#8c6d53]/40">
-                    <Bot className="size-10 sm:size-12" />
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={quickTriageInput}
+                      onChange={(e) => setQuickTriageInput(e.target.value)}
+                      placeholder="Type an issue to preview instant routing..."
+                      className="flex-1 bg-white border border-[#d6c2b0] rounded-lg px-3 py-1.5 text-xs text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#8c6d53]"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        triggerElementPop(e.currentTarget);
+                        handleOpenNewTicket({
+                          category: liveQuickTriage.category,
+                          title: quickTriageInput.slice(0, 64),
+                          description: quickTriageInput,
+                        });
+                      }}
+                      className="calm-btn shrink-0 rounded-lg bg-[#8c6d53] hover:bg-[#765a43] text-white px-3 py-1.5 text-xs font-semibold cursor-pointer"
+                    >
+                      Launch
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-600">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[#6e533c]">
+                        {liveQuickTriage.categoryLabel}
+                      </span>
+                      <span>·</span>
+                      <span className="uppercase font-mono text-[10px] px-1.5 py-0.5 rounded bg-white border border-[#d6c2b0] text-[#6e533c]">
+                        {liveQuickTriage.priority}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[10px] text-stone-500">
+                      Queue: {liveQuickTriage.assignedTeam}
+                    </span>
                   </div>
                 </div>
               </div>
