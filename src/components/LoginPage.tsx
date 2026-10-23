@@ -12,6 +12,8 @@ import {
   EyeOff,
   AlertCircle,
   Loader2,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -24,6 +26,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
     signUp,
     signInWithGoogle,
     showToast,
+    isDarkMode,
+    toggleDarkMode,
   } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'signup' | 'verify'>('signin');
@@ -130,16 +134,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
   return (
     <div className="min-h-screen flex w-full bg-[#f4f4f2] text-[#262523] font-sans">
       {/* LEFT PANEL - Calm Warm Stone & Light Brown */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#ebe9e4] border-r border-[#e2dfd9] flex-col justify-between p-12 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#efede8] border-r border-[#e4dfd7] flex-col justify-between p-12 relative overflow-hidden">
         <div className="relative z-10 flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-[#8c6d53] text-white grid place-items-center font-bold">
+          <div className="size-10 rounded-xl bg-[#ebe3da] border border-[#d6c2b0] text-[#8c6d53] grid place-items-center font-bold">
             <Bot className="size-5" />
           </div>
           <span className="text-xl font-bold tracking-tight text-[#262523]">TechnoResolve Desk</span>
         </div>
 
         <div className="relative z-10 max-w-lg mb-10 space-y-4">
-          <span className="inline-block px-3 py-1 rounded-full bg-[#f5efe8] border border-[#d6c2b0] text-xs font-semibold text-[#6e533c]">
+          <span className="inline-block px-3 py-1 rounded-full bg-[#ebe3da] border border-[#d6c2b0] text-xs font-semibold text-[#6e533c]">
             Support & Service Desk
           </span>
           <h1 className="text-4xl lg:text-5xl font-bold text-[#262523] leading-[1.12]">
@@ -155,28 +159,51 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToLanding }) => {
         </div>
       </div>
 
-      {/* RIGHT PANEL - Auth Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 md:px-20 py-12 relative overflow-y-auto bg-white">
+      {/* RIGHT PANEL - Harmonized Warm Stone Canvas with Elevated Form Card */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 md:px-20 py-12 relative overflow-y-auto bg-[#f4f4f2]">
+        {/* Top Bar Controls */}
+        <div className="absolute top-6 left-6 right-6 lg:left-12 lg:right-12 flex items-center justify-between">
+          {onBackToLanding ? (
+            <button
+              onClick={onBackToLanding}
+              className="flex items-center gap-2 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="size-4" />
+              <span>Back to home</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="calm-btn flex items-center gap-1.5 rounded-xl bg-[#ebe9e4] hover:bg-[#e3dfd8] border border-[#d6d1c7] px-3 py-1.5 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-all cursor-pointer"
+          >
+            {isDarkMode ? (
+              <>
+                <Sun className="size-3.5 text-[#8c6d53]" />
+                <span>Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="size-3.5 text-[#8c6d53]" />
+                <span>Dark</span>
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center gap-3 mb-10">
-          <div className="size-9 rounded-xl bg-[#8c6d53] text-white grid place-items-center font-bold">
+        <div className="lg:hidden flex items-center gap-3 mb-8 mt-8">
+          <div className="size-9 rounded-xl bg-[#ebe3da] border border-[#d6c2b0] text-[#8c6d53] grid place-items-center font-bold">
             <Bot className="size-5" />
           </div>
           <span className="text-lg font-bold tracking-tight text-[#262523]">TechnoResolve Desk</span>
         </div>
 
-        {/* Back Button */}
-        {onBackToLanding && (
-          <button
-            onClick={onBackToLanding}
-            className="absolute top-8 left-6 lg:left-12 flex items-center gap-2 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="size-4" />
-            <span>Back to home</span>
-          </button>
-        )}
-
-        <div className="max-w-md w-full mx-auto calm-fade-slide">
+        <div className="max-w-md w-full mx-auto bg-white border border-[#e2dfd9] rounded-2xl p-7 sm:p-8 calm-fade-slide">
           <div className="mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-[#262523] mb-2">
               {mode === 'signin' ? 'Welcome back' : 'Create an account'}

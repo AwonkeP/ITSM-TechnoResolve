@@ -29,7 +29,7 @@ export const RoleSwitcher: React.FC = () => {
   return (
     <div
       id="role-switcher"
-      className="flex items-center gap-1 rounded-full bg-[#ebe9e4] p-1 text-xs border border-[#e2dfd9]"
+      className="flex items-center gap-1 rounded-full bg-[#ebe9e4] p-1 text-xs border border-[#d6d1c7]"
     >
       {visibleRoles.map((r) => {
         const Icon = r.icon;
@@ -44,7 +44,7 @@ export const RoleSwitcher: React.FC = () => {
             className={`calm-btn flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs cursor-pointer border whitespace-nowrap shrink-0 ${
               isActive
                 ? 'bg-[#8c6d53] text-white border-[#8c6d53] font-semibold shadow-2xs'
-                : 'bg-white text-stone-700 border-[#e2dfd9] hover:bg-[#f5efe8] hover:text-[#6e533c] hover:border-[#c7b6a6] font-medium'
+                : 'bg-[#f4f4f2] text-stone-700 border-[#d6d1c7] hover:bg-[#ebe3da] hover:text-[#6e533c] hover:border-[#c7b6a6] font-medium'
             }`}
           >
             <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-white' : 'text-[#8c6d53]'}`} />

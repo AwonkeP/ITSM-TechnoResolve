@@ -366,11 +366,11 @@ export const TechnicianWorkspace: React.FC = () => {
     <div className="flex h-screen w-full overflow-hidden font-sans bg-[#f4f4f2] text-stone-800">
       
       {/* 1. LEFT SIDEBAR */}
-      <aside className="w-[210px] border-r border-[#e2dfd9] bg-white flex flex-col shrink-0">
+      <aside className="w-[210px] border-r border-[#e4dfd7] bg-[#efede8] flex flex-col shrink-0">
         {/* Logo */}
-        <div className="h-12 flex items-center px-4 gap-3 border-b border-[#f0eee9] shrink-0">
+        <div className="h-12 flex items-center px-4 gap-3 border-b border-[#e4dfd7] shrink-0">
           <div className="flex items-center gap-2">
-             <span className="size-7 rounded-md bg-[#f5efe8] text-[#8c6d53] border border-[#e3d5c5] font-bold text-sm grid place-items-center">
+             <span className="size-7 rounded-md bg-[#ebe3da] text-[#8c6d53] border border-[#d6c2b0] font-bold text-sm grid place-items-center">
                T
              </span>
              <div className="leading-tight">
@@ -387,7 +387,7 @@ export const TechnicianWorkspace: React.FC = () => {
             className={`calm-btn w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs cursor-pointer ${
               filterMode === 'mine'
                 ? 'bg-[#8c6d53] text-white font-semibold'
-                : 'text-stone-600 hover:bg-[#f4f4f2] hover:text-stone-900 font-medium'
+                : 'text-stone-600 hover:bg-[#e5e1da] hover:text-stone-900 font-medium'
             }`}
           >
             <div className="flex items-center gap-2.5"><TicketIcon className="size-3.5" /> My Tickets</div>
@@ -405,7 +405,7 @@ export const TechnicianWorkspace: React.FC = () => {
             className={`calm-btn w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs cursor-pointer ${
               filterMode === 'all'
                 ? 'bg-[#8c6d53] text-white font-semibold'
-                : 'text-stone-600 hover:bg-[#f4f4f2] hover:text-stone-900 font-medium'
+                : 'text-stone-600 hover:bg-[#e5e1da] hover:text-stone-900 font-medium'
             }`}
           >
             <div className="flex items-center gap-2.5"><List className="size-3.5" /> Team Queue</div>
@@ -423,7 +423,7 @@ export const TechnicianWorkspace: React.FC = () => {
             className={`calm-btn w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs cursor-pointer ${
               filterMode === 'escalated'
                 ? 'bg-[#8c6d53] text-white font-semibold'
-                : 'text-stone-600 hover:bg-[#f4f4f2] hover:text-stone-900 font-medium'
+                : 'text-stone-600 hover:bg-[#e5e1da] hover:text-stone-900 font-medium'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -444,7 +444,7 @@ export const TechnicianWorkspace: React.FC = () => {
             className={`calm-btn w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs cursor-pointer ${
               filterMode === 'resolved'
                 ? 'bg-[#2f6b45] text-white font-semibold'
-                : 'text-stone-600 hover:bg-[#f4f4f2] hover:text-stone-900 font-medium'
+                : 'text-stone-600 hover:bg-[#e5e1da] hover:text-stone-900 font-medium'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -462,7 +462,7 @@ export const TechnicianWorkspace: React.FC = () => {
         </nav>
 
         {/* Quiet Footer Summary */}
-        <div className="p-3 border-t border-[#e2dfd9] bg-[#fafaf9] text-[11px] text-stone-500 space-y-1">
+        <div className="p-3 border-t border-[#e4dfd7] bg-[#e9e6df] text-[11px] text-stone-500 space-y-1">
           <div className="flex items-center justify-between">
             <span>SLA Policy</span>
             <span className="font-mono font-semibold text-[#2f6b45] tabular-nums">
@@ -475,14 +475,14 @@ export const TechnicianWorkspace: React.FC = () => {
       {/* 2. MAIN CONTENT */}
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* Top Navbar */}
-        <header className="h-12 border-b border-[#e2dfd9] bg-white flex items-center justify-end px-4 gap-3 shrink-0 text-stone-800">
+        {/* Top Navbar — Harmonized with warm stone canvas */}
+        <header className="h-12 border-b border-[#e4dfd7] bg-[#f4f4f2]/95 backdrop-blur-md flex items-center justify-end px-4 gap-3 shrink-0 text-stone-800">
           {currentUser?.role === 'admin' && <RoleSwitcher />}
 
           <button
             onClick={toggleDarkMode}
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            className="calm-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] cursor-pointer whitespace-nowrap shrink-0"
+            className="calm-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-[#ebe9e4] hover:bg-[#e3dfd8] border border-[#d6d1c7] cursor-pointer whitespace-nowrap shrink-0"
           >
             {isDarkMode ? (
               <>
@@ -497,8 +497,8 @@ export const TechnicianWorkspace: React.FC = () => {
             )}
           </button>
           
-          <div className="flex items-center gap-2.5 border border-[#e2dfd9] bg-[#fafaf9] rounded-full py-1 px-3">
-             <div className="size-6 rounded-full bg-[#f5efe8] text-[#6e533c] border border-[#e3d5c5] flex items-center justify-center text-xs font-bold uppercase">
+          <div className="flex items-center gap-2.5 border border-[#d6d1c7] bg-[#ebe9e4] rounded-full py-1 px-3">
+             <div className="size-6 rounded-full bg-[#ebe3da] text-[#6e533c] border border-[#d6c2b0] flex items-center justify-center text-xs font-bold uppercase">
                 {currentUser?.full_name?.charAt(0) || 'A'}
              </div>
              <div className="leading-tight pr-1 text-left">
@@ -510,10 +510,10 @@ export const TechnicianWorkspace: React.FC = () => {
           
           <button
             onClick={() => setIsNotificationCenterOpen(true)}
-            className="calm-btn relative p-2 rounded-full text-stone-500 hover:bg-[#f4f4f2] hover:text-stone-800 cursor-pointer"
+            className="calm-btn relative p-2 rounded-full text-stone-500 hover:bg-[#ebe9e4] hover:text-stone-800 cursor-pointer"
           >
             <Bell className="size-4.5" />
-            <span className="absolute top-1.5 right-1.5 size-3.5 bg-[#8c6d53] border-2 border-white rounded-full text-[8px] font-bold text-white flex items-center justify-center tabular-nums">1</span>
+            <span className="absolute top-1.5 right-1.5 size-3.5 bg-[#8c6d53] border-2 border-[#f4f4f2] rounded-full text-[8px] font-bold text-white flex items-center justify-center tabular-nums">1</span>
           </button>
 
           <button onClick={signOut} className="calm-btn flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-stone-900 cursor-pointer">

@@ -126,12 +126,15 @@ html.dark body {
 
 /* Dark Mode Surface & Text Adaptation Across All Portals & Modals */
 html.dark .bg-\[\#f4f4f2\],
+html.dark .bg-\[\#f4f4f2\]\/95,
 html.dark .bg-\[\#f4f4f2\]\/70,
 html.dark .bg-\[\#f4f4f2\]\/60,
 html.dark .bg-\[\#f4f4f2\]\/50 {
   background-color: #141312 !important;
 }
 
+html.dark .bg-\[\#efede8\],
+html.dark .bg-\[\#e9e6df\],
 html.dark .bg-\[\#fafaf9\] {
   background-color: #181715 !important;
 }
@@ -147,14 +150,16 @@ html.dark .bg-white\/70 {
 }
 
 html.dark .bg-\[\#ebe9e4\],
+html.dark .bg-\[\#e5e1da\],
 html.dark .bg-stone-100,
 html.dark .bg-stone-50 {
-  background-color: #262421 !important;
+  background-color: #24221f !important;
 }
 
 /* Light Brown Accents in Dark Mode */
 html.dark .bg-\[\#f5efe8\],
 html.dark .bg-\[\#ebe3da\],
+html.dark .bg-\[\#ebe3da\]\/70,
 html.dark .bg-\[\#ebe5df\] {
   background-color: #2b231d !important;
 }
@@ -191,6 +196,8 @@ html.dark .border-\[\#c6e6d0\] {
 
 /* Borders & Dividers in Dark Mode */
 html.dark .border-\[\#e2dfd9\],
+html.dark .border-\[\#e4dfd7\],
+html.dark .border-\[\#d6d1c7\],
 html.dark .border-\[\#ebe9e4\],
 html.dark .border-\[\#f0eee9\],
 html.dark .border-\[\#d5d1c8\],
@@ -250,12 +257,15 @@ html.dark .hover\:bg-\[\#f4f4f2\]:hover,
 html.dark .hover\:bg-\[\#f4f4f2\]\/60:hover,
 html.dark .hover\:bg-\[\#f4f4f2\]\/70:hover,
 html.dark .hover\:bg-\[\#f4f4f2\]\/50:hover,
-html.dark .hover\:bg-\[\#ebe9e4\]:hover {
-  background-color: #262421 !important;
+html.dark .hover\:bg-\[\#ebe9e4\]:hover,
+html.dark .hover\:bg-\[\#e5e1da\]:hover,
+html.dark .hover\:bg-\[\#e3dfd8\]:hover {
+  background-color: #2c2925 !important;
 }
 
-html.dark .hover\:bg-\[\#f5efe8\]:hover {
-  background-color: #2b231d !important;
+html.dark .hover\:bg-\[\#f5efe8\]:hover,
+html.dark .hover\:bg-\[\#ebe3da\]:hover {
+  background-color: #332922 !important;
 }
 
 .panel {

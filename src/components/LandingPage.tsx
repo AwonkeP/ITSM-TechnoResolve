@@ -15,26 +15,45 @@ import {
   Eye,
   Check,
   HelpCircle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export const LandingPage: React.FC<{
   onOpenAuth: () => void;
   onOpenNewTicket: () => void;
 }> = ({ onOpenAuth, onOpenNewTicket }) => {
-  const { currentUser, setActivePage } = useApp();
+  const { currentUser, setActivePage, isDarkMode, toggleDarkMode } = useApp();
 
   return (
     <div id="landing-page" className="min-h-screen bg-[#f4f4f2] text-[#262523] overflow-x-hidden font-sans">
-      {/* Top Header */}
-      <header className="sticky top-0 z-20 border-b border-[#e2dfd9] bg-white">
+      {/* Top Header — Harmonized with the warm stone page canvas */}
+      <header className="sticky top-0 z-20 border-b border-[#e4dfd7] bg-[#f4f4f2]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-xl bg-[#f5efe8] border border-[#d6c2b0] text-[#8c6d53]">
+            <div className="grid size-9 place-items-center rounded-xl bg-[#ebe3da] border border-[#d6c2b0] text-[#8c6d53]">
               <Bot className="size-5" />
             </div>
             <span className="text-base font-bold tracking-tight text-[#262523]">TechnoResolve Desk</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={toggleDarkMode}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="calm-btn flex items-center gap-1.5 rounded-xl bg-[#ebe9e4] hover:bg-[#e3dfd8] border border-[#d6d1c7] px-3 py-2 text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-all cursor-pointer"
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun className="size-3.5 text-[#8c6d53]" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="size-3.5 text-[#8c6d53]" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
             <button
               id="landing-signin-btn"
               onClick={() => (currentUser ? setActivePage('dashboard') : onOpenAuth())}
@@ -50,7 +69,7 @@ export const LandingPage: React.FC<{
       <main className="mx-auto max-w-6xl px-6 pb-20 pt-12 md:pt-16">
         {/* 1. HERO SECTION */}
         <div className="max-w-3xl mx-auto text-center space-y-6 mb-16 calm-fade-slide">
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#f5efe8] px-3.5 py-1 text-xs font-semibold text-[#6e533c] border border-[#d6c2b0]">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#ebe3da] px-3.5 py-1 text-xs font-semibold text-[#6e533c] border border-[#d6c2b0]">
             <Sparkles className="size-3.5 text-[#8c6d53]" />
             AI Ticket Classification & Support Desk
           </span>
@@ -75,7 +94,7 @@ export const LandingPage: React.FC<{
             <button
               id="hero-submit-request-btn"
               onClick={onOpenNewTicket}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6c2b0] bg-white hover:bg-[#f5efe8] px-7 py-3.5 text-sm font-semibold text-[#6e533c] transition-all cursor-pointer calm-btn"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6c2b0] bg-[#ebe3da]/70 hover:bg-[#ebe3da] px-7 py-3.5 text-sm font-semibold text-[#6e533c] transition-all cursor-pointer calm-btn"
             >
               <span>Submit a Request</span>
             </button>
@@ -381,7 +400,7 @@ export const LandingPage: React.FC<{
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#e2dfd9] bg-white py-8 text-center text-[#8c8881]">
+      <footer className="border-t border-[#e4dfd7] bg-[#efede8] py-8 text-center text-[#8c8881]">
         <p className="text-xs font-medium">
           © {new Date().getFullYear()} TechnoResolve Desk. Customer Support & Helpdesk Portal.
         </p>

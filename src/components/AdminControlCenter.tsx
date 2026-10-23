@@ -429,16 +429,16 @@ export const AdminControlCenter: React.FC = () => {
         />
       )}
 
-      {/* Left Operations Sidebar — Clean White & Warm Stone Grey */}
+      {/* Left Operations Sidebar — Harmonized Warm Stone */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col bg-white text-[#5c5954] border-r border-[#e2dfd9] transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col bg-[#efede8] text-[#5c5954] border-r border-[#e4dfd7] transition-transform duration-200 lg:translate-x-0 ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e2dfd9] bg-white">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e4dfd7] bg-[#efede8]">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-xl bg-[#f5efe8] text-[#8c6d53] border border-[#d6c2b0]">
+            <div className="grid size-9 place-items-center rounded-xl bg-[#ebe3da] text-[#8c6d53] border border-[#d6c2b0]">
               <ShieldCheck className="size-5" />
             </div>
             <div>
@@ -455,7 +455,7 @@ export const AdminControlCenter: React.FC = () => {
         </div>
 
         {/* Nav Groups */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 bg-white">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 bg-[#efede8]">
           {navItems.map((group) => (
             <div key={group.group} className="space-y-1">
               <p className="text-[10px] font-bold tracking-wider uppercase text-[#8c8881] px-3 mb-2">
@@ -473,8 +473,8 @@ export const AdminControlCenter: React.FC = () => {
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-[#f5efe8] text-[#6e533c] border border-[#d6c2b0]'
-                        : 'text-[#5c5954] hover:text-[#262523] hover:bg-[#f4f4f2] border border-transparent'
+                        ? 'bg-[#ebe3da] text-[#6e533c] border border-[#d6c2b0]'
+                        : 'text-[#5c5954] hover:text-[#262523] hover:bg-[#e5e1da] border border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -486,7 +486,7 @@ export const AdminControlCenter: React.FC = () => {
                         className={`px-2 py-0.5 text-[10px] font-bold rounded-full tabular-nums ${
                           item.id === 'approvals' && item.badge > 0
                             ? 'bg-[#8c6d53] text-white'
-                            : 'bg-[#ebe9e4] text-[#5c5954]'
+                            : 'bg-[#e5e1da] text-[#5c5954]'
                         }`}
                       >
                         {item.badge}
@@ -500,10 +500,10 @@ export const AdminControlCenter: React.FC = () => {
         </div>
 
         {/* Quick action buttons */}
-        <div className="p-3 border-t border-[#e2dfd9] bg-[#f4f4f2]/60">
+        <div className="p-3 border-t border-[#e4dfd7] bg-[#e9e6df]">
           <button
             onClick={() => setIsOutboxOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white hover:bg-[#f5efe8] text-[#5c5954] hover:text-[#6e533c] text-xs font-semibold border border-[#e2dfd9] transition-all cursor-pointer calm-btn"
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-[#f4f4f2] hover:bg-[#ebe3da] text-[#5c5954] hover:text-[#6e533c] text-xs font-semibold border border-[#d6d1c7] transition-all cursor-pointer calm-btn"
           >
             <Mail className="size-3.5 text-[#8c6d53]" />
             <span>Email Outbox ({outbox.length})</span>
@@ -511,7 +511,7 @@ export const AdminControlCenter: React.FC = () => {
         </div>
 
         {/* Footer: User profile & Logout */}
-        <div className="p-4 border-t border-[#e2dfd9] flex items-center justify-between bg-white">
+        <div className="p-4 border-t border-[#e4dfd7] flex items-center justify-between bg-[#efede8]">
           <div className="text-xs min-w-0">
             <p className="font-bold text-[#262523] truncate max-w-[145px]">{currentUser?.full_name || 'Admin User'}</p>
             <p className="text-[11px] text-[#8c8881] font-mono truncate max-w-[145px]">{currentUser?.email}</p>
@@ -519,7 +519,7 @@ export const AdminControlCenter: React.FC = () => {
           <button
             onClick={signOut}
             title="Sign out"
-            className="p-2 text-[#5c5954] hover:text-[#262523] hover:bg-[#f4f4f2] rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-[#5c5954] hover:text-[#262523] hover:bg-[#e5e1da] rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="size-4" />
           </button>
@@ -528,12 +528,12 @@ export const AdminControlCenter: React.FC = () => {
 
       {/* Main Workspace View */}
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-        {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 border-b border-[#e2dfd9] px-4 sm:px-8 py-3.5 flex items-center justify-between bg-white text-[#262523]">
+        {/* Top Header Bar — Harmonized with the warm stone page canvas */}
+        <header className="sticky top-0 z-30 border-b border-[#e4dfd7] px-4 sm:px-8 py-3.5 flex items-center justify-between bg-[#f4f4f2]/95 backdrop-blur-md text-[#262523]">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-[#e2dfd9] text-[#5c5954] hover:bg-[#f4f4f2] cursor-pointer"
+              className="lg:hidden p-2 rounded-xl border border-[#d6d1c7] bg-[#ebe9e4] text-[#5c5954] hover:bg-[#e3dfd8] cursor-pointer"
             >
               <Menu className="size-4" />
             </button>
@@ -548,7 +548,7 @@ export const AdminControlCenter: React.FC = () => {
             <button
               onClick={toggleDarkMode}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="calm-btn flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-[#e2dfd9] bg-white hover:bg-[#f4f4f2] text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-all cursor-pointer whitespace-nowrap shrink-0"
+              className="calm-btn flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-[#d6d1c7] bg-[#ebe9e4] hover:bg-[#e3dfd8] text-xs font-semibold text-[#5c5954] hover:text-[#262523] transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
               {isDarkMode ? (
                 <>
@@ -567,7 +567,7 @@ export const AdminControlCenter: React.FC = () => {
             <button
               onClick={() => setIsNotificationCenterOpen(true)}
               title="Notifications"
-              className="relative p-2 rounded-xl border border-[#e2dfd9] bg-white text-[#5c5954] hover:text-[#262523] hover:bg-[#f4f4f2] transition-all cursor-pointer"
+              className="relative p-2 rounded-xl border border-[#d6d1c7] bg-[#ebe9e4] text-[#5c5954] hover:text-[#262523] hover:bg-[#e3dfd8] transition-all cursor-pointer"
             >
               <Bell className="size-4" />
               {unreadNotificationsCount > 0 && (

@@ -218,12 +218,12 @@ export const CustomerPortal: React.FC = () => {
 
   return (
     <div id="customer-portal" className="min-h-screen bg-[#f4f4f2] text-stone-800 flex flex-col font-sans">
-      {/* Top Header - Calm White & Stone */}
-      <header className="sticky top-0 z-30 border-b border-[#e2dfd9] bg-white text-stone-800">
+      {/* Top Header — Harmonized with the warm stone page canvas */}
+      <header className="sticky top-0 z-30 border-b border-[#e4dfd7] bg-[#f4f4f2]/95 backdrop-blur-md text-stone-800">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-lg bg-[#f5efe8] text-[#8c6d53] border border-[#e3d5c5]">
+            <div className="grid size-9 place-items-center rounded-lg bg-[#ebe3da] text-[#8c6d53] border border-[#d6c2b0]">
               <Bot className="size-5 text-[#8c6d53]" />
             </div>
             <span className="font-bold text-stone-800 text-base tracking-tight whitespace-nowrap shrink-0">
@@ -232,7 +232,7 @@ export const CustomerPortal: React.FC = () => {
           </div>
 
           {/* Center Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-1 bg-[#f4f4f2] p-1 rounded-full border border-[#e2dfd9]">
+          <nav className="hidden md:flex items-center gap-1 bg-[#ebe9e4] p-1 rounded-full border border-[#d6d1c7]">
             {[
               { id: 'home', label: 'Home', icon: Home },
               {
@@ -252,7 +252,7 @@ export const CustomerPortal: React.FC = () => {
                   className={`calm-btn flex items-center gap-2 px-4 py-1.5 text-xs rounded-full cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-[#8c6d53] text-white font-semibold shadow-2xs'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-white/70 font-medium'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-[#f4f4f2] font-medium'
                   }`}
                 >
                   <Icon className={`size-4 ${isActive ? 'text-white' : 'text-[#8c6d53]'}`} />
@@ -268,7 +268,7 @@ export const CustomerPortal: React.FC = () => {
             <button
               onClick={toggleDarkMode}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="calm-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-[#f4f4f2] hover:bg-[#ebe9e4] border border-[#e2dfd9] cursor-pointer whitespace-nowrap shrink-0"
+              className="calm-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-[#ebe9e4] hover:bg-[#e3dfd8] border border-[#d6d1c7] cursor-pointer whitespace-nowrap shrink-0"
             >
               {isDarkMode ? (
                 <>
@@ -287,7 +287,7 @@ export const CustomerPortal: React.FC = () => {
             <button
               onClick={() => setIsNotificationCenterOpen(true)}
               title="Notifications"
-              className="calm-btn relative p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-[#f4f4f2] border border-transparent hover:border-[#e2dfd9] cursor-pointer"
+              className="calm-btn relative p-2 rounded-lg text-stone-600 hover:text-stone-900 bg-[#ebe9e4] hover:bg-[#e3dfd8] border border-[#d6d1c7] cursor-pointer"
             >
               <Bell className="size-4.5" />
               {unreadNotificationsCount > 0 && (
@@ -303,7 +303,7 @@ export const CustomerPortal: React.FC = () => {
             {/* Sign Out Button */}
             <button
               onClick={signOut}
-              className="calm-btn flex items-center gap-1.5 text-stone-600 hover:text-stone-900 text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-[#f4f4f2] cursor-pointer whitespace-nowrap shrink-0"
+              className="calm-btn flex items-center gap-1.5 text-stone-600 hover:text-stone-900 text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-[#ebe9e4] cursor-pointer whitespace-nowrap shrink-0"
             >
               <span className="hidden sm:inline">Sign out</span>
               <LogOut className="size-3.5" />
@@ -312,7 +312,7 @@ export const CustomerPortal: React.FC = () => {
         </div>
 
         {/* Mobile Navigation Row */}
-        <div className="md:hidden flex items-center justify-around border-t border-[#e2dfd9] bg-[#fafaf9] px-3 py-2 text-xs">
+        <div className="md:hidden flex items-center justify-around border-t border-[#e4dfd7] bg-[#efede8] px-3 py-2 text-xs">
           {[
             { id: 'home', label: 'Home', icon: Home },
             { id: 'tickets', label: `Tickets (${myTickets.length})`, icon: TicketIcon },
